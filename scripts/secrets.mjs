@@ -6,10 +6,10 @@ const project = process.env.GOOGLE_CLOUD_PROJECT;
 if (!project) throw new Error('GOOGLE_CLOUD_PROJECT is required');
 const executable = process.env.GCLOUD ?? 'gcloud';
 const values = {
-  'senpilot-database-url': process.env.DATABASE_URL,
-  'senpilot-openai-key': process.env.OPENAI_API_KEY,
-  'senpilot-google-oauth': await readFile(process.env.GOOGLE_OAUTH_CREDENTIALS_PATH ?? 'secrets/google-oauth.json'),
-  'senpilot-google-token': await readFile(process.env.GOOGLE_OAUTH_TOKEN_PATH ?? 'secrets/google-token.json'),
+  'filingfetch-database-url': process.env.DATABASE_URL,
+  'filingfetch-openai-key': process.env.OPENAI_API_KEY,
+  'filingfetch-google-oauth': await readFile(process.env.GOOGLE_OAUTH_CREDENTIALS_PATH ?? 'secrets/google-oauth.json'),
+  'filingfetch-google-token': await readFile(process.env.GOOGLE_OAUTH_TOKEN_PATH ?? 'secrets/google-token.json'),
 };
 if (Object.values(values).some(value => !value?.length)) throw new Error('Required secrets are missing');
 for (const [name, value] of Object.entries(values)) {

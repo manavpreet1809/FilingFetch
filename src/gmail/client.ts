@@ -82,7 +82,7 @@ export class GmailClient {
       subject: /^re:/i.test(email.subject) ? email.subject : `Re: ${email.subject}`,
       ...(typeof text === 'string' ? { text } : text), messageId, inReplyTo: email.messageId,
       references: [...email.references, ...(email.messageId ? [email.messageId] : [])],
-      headers: { 'Auto-Submitted': 'auto-replied', 'X-Auto-Response-Suppress': 'All', 'X-Filing-Agent': 'senpilot-takehome', 'X-Filing-Job': messageId },
+      headers: { 'Auto-Submitted': 'auto-replied', 'X-Auto-Response-Suppress': 'All', 'X-Filing-Agent': 'filingfetch', 'X-Filing-Job': messageId },
       attachments: attachment ? [{ path: attachment, contentType: 'application/zip' }] : [],
     }).compile().build();
     if (raw.length > 34_000_000) throw new Error('Email exceeds attachment budget');

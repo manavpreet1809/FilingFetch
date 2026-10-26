@@ -5,14 +5,14 @@ REGION="${REGION:-us-east1}"
 AGENT_EMAIL="${AGENT_EMAIL:?Set AGENT_EMAIL}"
 GCLOUD="${GCLOUD:-gcloud}"
 gc() { "$GCLOUD" --quiet --project="$PROJECT" "$@"; }
-RUNTIME="senpilot-agent@$PROJECT.iam.gserviceaccount.com"
-CALLER="senpilot-caller@$PROJECT.iam.gserviceaccount.com"
+RUNTIME="filingfetch-agent@$PROJECT.iam.gserviceaccount.com"
+CALLER="filingfetch-caller@$PROJECT.iam.gserviceaccount.com"
 TAG=$(git rev-parse --short HEAD)
-gc builds submit . --config=cloudbuild.yaml --region="$REGION" --substitutions="_REGION=$REGION,_TAG=$TAG" --service-account="projects/$PROJECT/serviceAccounts/senpilot-build@$PROJECT.iam.gserviceaccount.com" --gcs-source-staging-dir="gs://$PROJECT-builds/source"
-gc run deploy senpilot-agent --region="$REGION" --image="$REGION-docker.pkg.dev/$PROJECT/senpilot/agent:$TAG" --service-account="$RUNTIME" --no-allow-unauthenticated --cpu=1 --memory=1Gi --concurrency=4 --min=0 --max=2 --timeout=900 --set-env-vars="GOOGLE_CLOUD_PROJECT=$PROJECT,AGENT_EMAIL=$AGENT_EMAIL,CACHE_BACKEND=gcs,GCS_CACHE_BUCKET=$PROJECT-documents,GMAIL_TOPIC=projects/$PROJECT/topics/gmail-inbox,TASK_QUEUE=projects/$PROJECT/locations/$REGION/queues/filing-jobs,CALLER_SERVICE_ACCOUNT=$CALLER,GOOGLE_OAUTH_CREDENTIALS_PATH=/secrets/oauth/client.json,GOOGLE_OAUTH_TOKEN_PATH=/secrets/token/token.json" --set-secrets="DATABASE_URL=senpilot-database-url:latest,OPENAI_API_KEY=senpilot-openai-key:latest,/secrets/oauth/client.json=senpilot-google-oauth:latest,/secrets/token/token.json=senpilot-google-token:latest"
-URL=$(gc run services describe senpilot-agent --region="$REGION" --format='value(status.url)')
-gc run services update senpilot-agent --region="$REGION" --update-env-vars="SERVICE_URL=$URL"
-gc run services add-iam-policy-binding senpilot-agent --region="$REGION" --member="serviceAccount:$CALLER" --role=roles/run.invoker >/dev/null
+gc builds submit . --config=cloudbuild.yaml --region="$REGION" --substitutions="_REGION=$REGION,_TAG=$TAG" --service-account="projects/$PROJECT/serviceAccounts/filingfetch-build@$PROJECT.iam.gserviceaccount.com" --gcs-source-staging-dir="gs://$PROJECT-builds/source"
+gc run deploy filingfetch-agent --region="$REGION" --image="$REGION-docker.pkg.dev/$PROJECT/filingfetch/agent:$TAG" --service-account="$RUNTIME" --no-allow-unauthenticated --cpu=1 --memory=1Gi --concurrency=4 --min=0 --max=2 --timeout=900 --set-env-vars="GOOGLE_CLOUD_PROJECT=$PROJECT,AGENT_EMAIL=$AGENT_EMAIL,CACHE_BACKEND=gcs,GCS_CACHE_BUCKET=$PROJECT-documents,GMAIL_TOPIC=projects/$PROJECT/topics/gmail-inbox,TASK_QUEUE=projects/$PROJECT/locations/$REGION/queues/filing-jobs,CALLER_SERVICE_ACCOUNT=$CALLER,GOOGLE_OAUTH_CREDENTIALS_PATH=/secrets/oauth/client.json,GOOGLE_OAUTH_TOKEN_PATH=/secrets/token/token.json" --set-secrets="DATABASE_URL=filingfetch-database-url:latest,OPENAI_API_KEY=filingfetch-openai-key:latest,/secrets/oauth/client.json=filingfetch-google-oauth:latest,/secrets/token/token.json=filingfetch-google-token:latest"
+URL=$(gc run services describe filingfetch-agent --region="$REGION" --format='value(status.url)')
+gc run services update filingfetch-agent --region="$REGION" --update-env-vars="SERVICE_URL=$URL"
+gc run services add-iam-policy-binding filingfetch-agent --region="$REGION" --member="serviceAccount:$CALLER" --role=roles/run.invoker >/dev/null
 if gc pubsub subscriptions describe gmail-inbox-push >/dev/null 2>&1; then
   gc pubsub subscriptions modify-push-config gmail-inbox-push --push-endpoint="$URL/inbox" --push-auth-service-account="$CALLER" --push-auth-token-audience="$URL"
 else

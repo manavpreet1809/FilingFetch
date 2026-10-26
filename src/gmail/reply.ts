@@ -65,7 +65,7 @@ export function formatReply(result: FetchResult): ReplyContent {
       'Matter details', ...details.map(item => `- ${item}`), '',
       'Documents', ...documents.map(item => `- ${item}`), '', attachment,
       ...(notes.length ? ['', 'Notes', ...notes.map(item => `- ${item}`)] : []),
-      '', 'Best,', 'Senpilot Filing Agent', '', '---', '', ...footer, `Source: ${source.href}`,
+      '', 'Best,', 'FilingFetch', '', '---', '', ...footer, `Source: ${source.href}`,
     ].join('\n'),
     html: `<div style="font-family:Arial,sans-serif;line-height:1.5;color:#222">` +
       `<p>Hi,</p><p>Here are the documents and matter details you requested.</p>` +
@@ -74,7 +74,7 @@ export function formatReply(result: FetchResult): ReplyContent {
       `<p><strong>Documents</strong></p>${list(documents)}` +
       (files.length ? `<p>Attached is a ZIP containing <strong>${escapeHtml(attached)}</strong>.</p>` : `<p>${attachment}</p>`) +
       (notes.length ? `<p><strong>Notes</strong></p>${list(notes)}` : '') +
-      `<p>Best,<br>Senpilot Filing Agent</p><hr>` +
+      `<p>Best,<br>FilingFetch</p><hr>` +
       `<p>${footer.map(escapeHtml).join('<br>')}<br>Source: <a href="${escapeHtml(source.href)}">UARB</a></p></div>`,
   };
 }

@@ -4,15 +4,15 @@ PROJECT="${GOOGLE_CLOUD_PROJECT:?Set GOOGLE_CLOUD_PROJECT}"
 REGION="${REGION:-us-east1}"
 GCLOUD="${GCLOUD:-gcloud}"
 gc() { "$GCLOUD" --quiet --project="$PROJECT" "$@"; }
-RUNTIME="senpilot-agent@$PROJECT.iam.gserviceaccount.com"
-CALLER="senpilot-caller@$PROJECT.iam.gserviceaccount.com"
-BUILDER="senpilot-build@$PROJECT.iam.gserviceaccount.com"
+RUNTIME="filingfetch-agent@$PROJECT.iam.gserviceaccount.com"
+CALLER="filingfetch-caller@$PROJECT.iam.gserviceaccount.com"
+BUILDER="filingfetch-build@$PROJECT.iam.gserviceaccount.com"
 gc services enable run.googleapis.com cloudbuild.googleapis.com artifactregistry.googleapis.com secretmanager.googleapis.com cloudtasks.googleapis.com pubsub.googleapis.com cloudscheduler.googleapis.com iamcredentials.googleapis.com
-for account in senpilot-agent senpilot-caller senpilot-build; do
+for account in filingfetch-agent filingfetch-caller filingfetch-build; do
   gc iam service-accounts describe "$account@$PROJECT.iam.gserviceaccount.com" >/dev/null 2>&1 || gc iam service-accounts create "$account"
 done
-gc artifacts repositories describe senpilot --location="$REGION" >/dev/null 2>&1 || gc artifacts repositories create senpilot --repository-format=docker --location="$REGION"
-gc artifacts repositories add-iam-policy-binding senpilot --location="$REGION" --member="serviceAccount:$BUILDER" --role=roles/artifactregistry.writer >/dev/null
+gc artifacts repositories describe filingfetch --location="$REGION" >/dev/null 2>&1 || gc artifacts repositories create filingfetch --repository-format=docker --location="$REGION"
+gc artifacts repositories add-iam-policy-binding filingfetch --location="$REGION" --member="serviceAccount:$BUILDER" --role=roles/artifactregistry.writer >/dev/null
 gc projects add-iam-policy-binding "$PROJECT" --member="serviceAccount:$BUILDER" --role=roles/logging.logWriter --condition=None >/dev/null
 for suffix in documents builds; do
   gc storage buckets describe "gs://$PROJECT-$suffix" >/dev/null 2>&1 || gc storage buckets create "gs://$PROJECT-$suffix" --location="$REGION" --uniform-bucket-level-access --public-access-prevention
@@ -32,7 +32,7 @@ gc iam service-accounts add-iam-policy-binding "$CALLER" --member="serviceAccoun
 NUMBER=$(gc projects describe "$PROJECT" --format='value(projectNumber)')
 gc beta services identity create --service=pubsub.googleapis.com >/dev/null
 gc iam service-accounts add-iam-policy-binding "$CALLER" --member="serviceAccount:service-$NUMBER@gcp-sa-pubsub.iam.gserviceaccount.com" --role=roles/iam.serviceAccountTokenCreator >/dev/null
-for secret in senpilot-database-url senpilot-openai-key senpilot-google-oauth senpilot-google-token; do
+for secret in filingfetch-database-url filingfetch-openai-key filingfetch-google-oauth filingfetch-google-token; do
   gc secrets add-iam-policy-binding "$secret" --member="serviceAccount:$RUNTIME" --role=roles/secretmanager.secretAccessor >/dev/null
 done
 echo 'Cloud infrastructure is ready.'

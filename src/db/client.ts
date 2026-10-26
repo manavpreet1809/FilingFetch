@@ -11,6 +11,6 @@ export function createPool(connectionString: string) {
     connectionTimeoutMillis: 20_000,
     idleTimeoutMillis: 10_000,
     statement_timeout: 30_000,
-    application_name: 'senpilot-takehome',
+    application_name: 'filingfetch',
   });
 }
