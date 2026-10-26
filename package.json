@@ -19,7 +19,8 @@
     "fetch": "node --import tsx src/cli.ts",
     "browser:install": "playwright install chromium",
     "gmail:authorize": "node --import tsx src/gmail/authorize.ts",
-    "start": "node dist/src/server.js"
+    "start": "node dist/src/server.js",
+    "test": "node --import tsx --test tests/*.test.ts"
   },
   "dependencies": {
     "@google-cloud/storage": "^8.2.0",

@@ -11,3 +11,7 @@ The agent replies in the same thread with matter information, counts for all fiv
 ## Deployment naming
 
 Cloud setup and deployment scripts use the `filingfetch` resource prefix. Existing deployments using the previous prefix are not migrated automatically; configure the new resources before deploying.
+
+## Stage 1: Core retrieval
+
+See [setup, CLI usage, tests, and live acceptance checklist](docs/stage-1.md). Run `npm test` for offline core-retrieval checks. Live source acceptance remains pending.
