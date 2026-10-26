@@ -15,3 +15,7 @@ Cloud setup and deployment scripts use the `filingfetch` resource prefix. Existi
 ## Stage 1: Core retrieval
 
 See [setup, CLI usage, tests, and live acceptance checklist](docs/stage-1.md). Run `npm test` for offline core-retrieval checks. Live source acceptance remains pending.
+
+## Development plan
+
+[Three-week commit plan: October 26–November 15, 2026](docs/three-week-plan.md).
