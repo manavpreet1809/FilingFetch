@@ -18,4 +18,4 @@ See [setup, CLI usage, tests, and live acceptance checklist](docs/stage-1.md). R
 
 ## Development plan
 
-[Three-week commit plan: October 26–November 15, 2026](docs/three-week-plan.md).
+[30-stage development roadmap](docs/roadmap.md), with acceptance criteria and suggested commits for each stage.
