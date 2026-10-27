@@ -6,7 +6,7 @@ Stages are ordered by dependency, not assigned calendar days. The previous three
 
 ## Stage 01: Document the retrieval contract
 
-Status: planned.
+Status: complete (documentation contract reviewed against current implementation). See [retrieval contract](retrieval-contract.md).
 
 Work: Define the five categories, input formats, file limits, outputs, and CLI exit codes.
 

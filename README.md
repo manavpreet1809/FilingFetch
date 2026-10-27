@@ -19,3 +19,5 @@ See [setup, CLI usage, tests, and live acceptance checklist](docs/stage-1.md). R
 ## Development plan
 
 [30-stage development roadmap](docs/roadmap.md), with acceptance criteria and suggested commits for each stage.
+
+The [Stage 01 retrieval contract](docs/retrieval-contract.md) defines CLI inputs, supported categories, limits, outputs, exit codes, and partial-result behavior.
