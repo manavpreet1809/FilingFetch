@@ -16,7 +16,7 @@ Suggested commit: `Document the retrieval contract`
 
 ## Stage 02: Validate CLI inputs
 
-Status: planned.
+Status: complete. See [Stage 02 verification](stage-2.md).
 
 Work: Handle unknown options, malformed matter numbers, categories, and limits without starting a browser.
 
