@@ -9,6 +9,7 @@ import type { Config } from '../config.js';
 import { DOCUMENT_TYPES, FilingError, type DocumentReference, type FilingRequest, type Matter } from '../domain.js';
 import { parseCounts, parseDate } from './parse.js';
 import { assertMatterIdentity } from './identity.js';
+import { publicAccessIssue } from './access.js';
 import { safeFilename } from '../files/validate.js';
 
 export const UARB_URL = 'https://uarb.novascotia.ca/fmi/webd/UARB15';
@@ -120,6 +121,8 @@ export class UarbClient {
   }
 
   async openAttachments(doc: DocumentReference): Promise<string[]> {
+    const accessIssue = publicAccessIssue(doc.security);
+    if (accessIssue) throw new FilingError('NOT_PUBLIC', accessIssue);
     await this.closeAttachments();
     const current = (await this.visibleDocuments()).find(row => row.rowKey === doc.rowKey);
     if (doc.rowKey && (!current || current.id !== doc.id || current.title !== doc.title)) throw new FilingError('PAGE_CHANGED', 'The selected document row changed');
@@ -135,6 +138,8 @@ export class UarbClient {
   }
 
   async download(doc: DocumentReference, attachmentIndex: number, filename: string): Promise<{ path: string; filename: string }> {
+    const accessIssue = publicAccessIssue(doc.security);
+    if (accessIssue) throw new FilingError('NOT_PUBLIC', accessIssue);
     const button = this.page!.locator('.fm-download-button').nth(attachmentIndex);
     if ((await button.innerText()).trim() !== filename) throw new FilingError('PAGE_CHANGED', 'Attachment list changed while downloading');
     type Source = { download: Download } | { malformedHeaderUrl: string };

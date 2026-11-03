@@ -6,6 +6,7 @@ import { DocumentCache } from './cache/documents.js';
 import { validateFile } from './files/validate.js';
 import { assertMatterIdentity } from './uarb/identity.js';
 import { DocumentListing } from './uarb/listing.js';
+import { publicAccessIssue } from './uarb/access.js';
 
 type DocumentSource = Pick<UarbClient, 'open' | 'visibleDocuments' | 'nextPage' | 'openAttachments' | 'download' | 'closeAttachments' | 'screenshot' | 'timedOut' | 'close'>;
 
@@ -36,8 +37,9 @@ export async function fetchDocuments(input: FilingRequest, config: Config, direc
       const visible = await client.visibleDocuments();
       if (!visible.length) throw new FilingError('PAGE_CHANGED', 'Document rows could not be read');
       for (const doc of listing.observe(visible)) {
-        if (doc.security && doc.security.toLowerCase() !== 'public') {
-          result.skipped.push({ documentId: doc.id, documentTitle: doc.title, reason: 'Document is not public' });
+        const accessIssue = publicAccessIssue(doc.security);
+        if (accessIssue) {
+          result.skipped.push({ documentId: doc.id, documentTitle: doc.title, reason: accessIssue });
           continue;
         }
         let hit: FilingFile[] | null = null;

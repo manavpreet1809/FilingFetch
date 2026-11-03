@@ -103,3 +103,17 @@ test('three overlapping source windows exhaust exactly the advertised unique row
     assert.equal(result.listingExhausted, true); assert.deepEqual(result.warnings, []); assert.equal(fake.closed, true);
   });
 });
+
+test('unverified and restricted rows are reported without cache or attachment access', async () => {
+  await fixture(async (directory, config) => {
+    const fake = source(directory, [[doc('restricted','Restricted'), doc('blank',''), doc('unknown','Unknown'), doc('allowed',' Public ')]]);
+    const cache = new DocumentCache(config); let lookups = 0;
+    cache.get = async () => { lookups++; return null; };
+    let dialogs = 0; fake.openAttachments = async () => { dialogs++; return ['document.txt']; };
+    const result = await fetchDocuments(request, config, directory, cache, false, fake);
+    assert.deepEqual(fake.downloads, ['allowed']); assert.equal(lookups, 1); assert.equal(dialogs, 1);
+    assert.deepEqual(result.skipped.map(row => row.documentId), ['restricted','blank','unknown']);
+    assert.match(result.skipped[1]!.reason, /visibility is missing/);
+    assert.equal(result.listingExhausted, true); assert.equal(fake.closed, true);
+  });
+});

@@ -56,7 +56,7 @@ Suggested commit: `Verify document pagination`
 
 ## Stage 06: Enforce public-document filtering
 
-Status: planned.
+Status: complete. See [Stage 06 verification](stage-6.md).
 
 Work: Skip explicitly restricted rows and define handling for blank security fields.
 

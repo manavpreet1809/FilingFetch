@@ -26,7 +26,7 @@ Defaults are 20,000,000 bytes per file and for the final ZIP, a 30-second browse
 
 ## Retrieval behavior
 
-The requested matter identifier must match the returned matter. The report includes counts for all five categories. Retrieval traverses the selected category, deduplicates observed document identifiers, and accepts validated files up to the requested limit. Explicit non-public security labels are skipped. A blank security field currently does not trigger that filter; this policy still requires Stage 06 review.
+The requested matter identifier must match the returned matter. The report includes counts for all five categories. Retrieval traverses the selected category, deduplicates observed document identifiers, and accepts validated files up to the requested limit. Only an explicit Public security label authorizes retrieval. Blank, unknown and restricted labels are skipped before cache or attachment access; see the public-document policy below.
 
 Downloads must come from the expected UARB connector origin/path. Invalid, oversized, or failed attachments are skipped with reasons when recovery is possible. An unexpected page or unrecoverable source error fails the command. A retrieval timeout after matter metadata is available can return a partial result with a warning.
 
@@ -68,3 +68,12 @@ These are contract examples, not claims of observed source results.
 ## Stage acceptance
 
 Stage 01 is complete as a documentation milestone: the five categories, input formats, limits, output structure, exit codes, and valid/invalid/empty/partial examples are defined against the current source. Live source verification, exhaustive input tests, security-label policy, and artifact cleanup remain assigned to later stages.
+
+## Explicit public-document policy
+
+Only a trimmed, case-insensitive `Public` security label authorizes retrieval.
+Blank or unknown labels are unverified, not public: skip them with an explicit
+reason before cache lookup or attachment access. Restricted rows are skipped.
+The source client also enforces this policy on direct attachment operations.
+This may omit rows whose public status is not explicitly exposed by the source;
+no undocumented assumption is made for dated categories with blank labels.
