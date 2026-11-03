@@ -36,7 +36,7 @@ Suggested commit: `Verify matter navigation`
 
 ## Stage 04: Verify category counts
 
-Status: planned.
+Status: complete. See [Stage 04 verification](stage-4.md).
 
 Work: Parse all five source counts and detect missing or changed labels.
 

@@ -2,9 +2,13 @@ import { DOCUMENT_TYPES, FilingError, type DocumentType } from '../domain.js';
 
 export function parseCounts(labels: string[]): Record<DocumentType, number> {
   return Object.fromEntries(DOCUMENT_TYPES.map(type => {
-    const match = labels.map(label => label.trim()).find(label => label.startsWith(`${type} -`))?.match(/-\s*([\d,]+)\s*$/);
-    if (!match) throw new FilingError('PAGE_CHANGED', `Could not read the ${type} count`);
-    return [type, Number(match[1]!.replaceAll(',', ''))];
+    const candidates = labels.map(label => label.trim()).filter(label => label.startsWith(`${type} -`));
+    const match = candidates.length === 1
+      ? candidates[0]!.match(new RegExp(`^${type} -\\s*(0|[1-9]\\d*|[1-9]\\d{0,2}(?:,\\d{3})+)\\s*$`))
+      : null;
+    const count = match ? Number(match[1]!.replaceAll(',', '')) : NaN;
+    if (!Number.isSafeInteger(count) || count < 0) throw new FilingError('PAGE_CHANGED', `Could not read one unambiguous ${type} count`);
+    return [type, count];
   })) as Record<DocumentType, number>;
 }
 
