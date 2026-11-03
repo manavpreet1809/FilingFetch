@@ -117,3 +117,13 @@ test('unverified and restricted rows are reported without cache or attachment ac
     assert.equal(result.listingExhausted, true); assert.equal(fake.closed, true);
   });
 });
+
+test('changed attachment selection is not retried and its reason stays in the report', async () => {
+  await fixture(async (directory, config) => {
+    const fake = source(directory, [[doc('one')]]); let attempts = 0;
+    fake.download = async () => { attempts++; throw new FilingError('PAGE_CHANGED', 'Attachment list changed while downloading'); };
+    const result = await fetchDocuments(request, config, directory, new DocumentCache(config), false, fake);
+    assert.equal(attempts, 1); assert.deepEqual(result.files, []);
+    assert.match(result.skipped[0]!.reason, /Attachment list changed/); assert.equal(fake.closed, true);
+  });
+});

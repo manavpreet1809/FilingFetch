@@ -10,6 +10,7 @@ import { DOCUMENT_TYPES, FilingError, type DocumentReference, type FilingRequest
 import { parseCounts, parseDate } from './parse.js';
 import { assertMatterIdentity } from './identity.js';
 import { publicAccessIssue } from './access.js';
+import { assertDocumentSelection, AttachmentSelection } from './attachments.js';
 import { safeFilename } from '../files/validate.js';
 
 export const UARB_URL = 'https://uarb.novascotia.ca/fmi/webd/UARB15';
@@ -22,6 +23,7 @@ export class UarbClient {
   private idField = 201;
   private extensionField = 308;
   private datedRows = false;
+  private attachments = new AttachmentSelection();
   constructor(private config: Config, private directory: string, private headed = false) {}
 
   async open(request: FilingRequest): Promise<Matter> {
@@ -124,8 +126,7 @@ export class UarbClient {
     const accessIssue = publicAccessIssue(doc.security);
     if (accessIssue) throw new FilingError('NOT_PUBLIC', accessIssue);
     await this.closeAttachments();
-    const current = (await this.visibleDocuments()).find(row => row.rowKey === doc.rowKey);
-    if (doc.rowKey && (!current || current.id !== doc.id || current.title !== doc.title)) throw new FilingError('PAGE_CHANGED', 'The selected document row changed');
+    assertDocumentSelection(doc, await this.visibleDocuments());
     await this.row(doc).getByRole('button', { name: 'GO GET IT', exact: true }).click();
     await this.page!.getByText('Export Field to File', { exact: true }).or(this.page!.getByText('Download Files', { exact: true })).first().waitFor();
     if (await this.page!.getByText('Export Field to File', { exact: true }).isVisible()) {
@@ -134,14 +135,18 @@ export class UarbClient {
     await this.page!.getByText('Download Files', { exact: true }).waitFor();
     const buttons = this.page!.locator('.fm-download-button');
     await buttons.first().waitFor();
-    return (await buttons.allTextContents()).map(name => name.trim());
+    const names = (await buttons.allTextContents()).map(name => name.trim());
+    this.attachments.bind(doc, names);
+    return names;
   }
 
   async download(doc: DocumentReference, attachmentIndex: number, filename: string): Promise<{ path: string; filename: string }> {
     const accessIssue = publicAccessIssue(doc.security);
     if (accessIssue) throw new FilingError('NOT_PUBLIC', accessIssue);
+    assertDocumentSelection(doc, await this.visibleDocuments());
+    const names = (await this.page!.locator('.fm-download-button').allTextContents()).map(name => name.trim());
+    this.attachments.assertDownload(doc, attachmentIndex, filename, names);
     const button = this.page!.locator('.fm-download-button').nth(attachmentIndex);
-    if ((await button.innerText()).trim() !== filename) throw new FilingError('PAGE_CHANGED', 'Attachment list changed while downloading');
     type Source = { download: Download } | { malformedHeaderUrl: string };
     let resolve!: (source: Source) => void;
     let reject!: (error: Error) => void;
@@ -218,6 +223,7 @@ export class UarbClient {
   }
 
   async closeAttachments(): Promise<void> {
+    this.attachments.clear();
     const close = this.page?.getByRole('button', { name: 'Close', exact: true });
     if (close && await close.isVisible()) {
       await close.click();

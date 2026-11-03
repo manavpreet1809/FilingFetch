@@ -50,9 +50,9 @@ export async function fetchDocuments(input: FilingRequest, config: Config, direc
         } else {
           let attachments: string[] = [];
           try { attachments = await client.openAttachments(doc); }
-          catch {
+          catch (error) {
             if (client.timedOut) throw new FilingError('JOB_TIMEOUT', 'Retrieval exceeded its time limit');
-            result.skipped.push({ documentId: doc.id, documentTitle: doc.title, reason: 'Could not open the attachment dialog' });
+            result.skipped.push({ documentId: doc.id, documentTitle: doc.title, reason: error instanceof FilingError ? error.message : 'Could not open the attachment dialog' });
             await client.closeAttachments();
             continue;
           }
@@ -73,7 +73,7 @@ export async function fetchDocuments(input: FilingRequest, config: Config, direc
                 } catch (error) {
                   if (client.timedOut) throw new FilingError('JOB_TIMEOUT', 'Retrieval exceeded its time limit');
                   reason = error instanceof FilingError ? error.message : 'Download failed or timed out';
-                  if (error instanceof FilingError && ['FILE_SIZE', 'INVALID_FILE', 'INVALID_PDF'].includes(error.code)) break;
+                  if (error instanceof FilingError && ['FILE_SIZE', 'INVALID_FILE', 'INVALID_PDF', 'PAGE_CHANGED', 'NOT_PUBLIC'].includes(error.code)) break;
                 }
               }
               if (file) { downloaded.push(file); accept(file); }

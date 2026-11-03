@@ -77,3 +77,11 @@ reason before cache lookup or attachment access. Restricted rows are skipped.
 The source client also enforces this policy on direct attachment operations.
 This may omit rows whose public status is not explicitly exposed by the source;
 no undocumented assumption is made for dated categories with blank labels.
+
+## Attachment identity and changes
+
+Row metadata and the complete ordered attachment list must stay unchanged from
+selection through download. Reopening for a retry must match the original list.
+Changed row or dialog evidence is reported as a skipped file with a clear reason,
+not silently retried against a different attachment. This guards the observed UI
+state but cannot make a later server-side change atomic with a click.

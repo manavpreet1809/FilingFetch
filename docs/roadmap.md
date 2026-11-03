@@ -66,7 +66,7 @@ Suggested commit: `Enforce public-document filtering`
 
 ## Stage 07: Verify attachment selection
 
-Status: planned.
+Status: complete for the specified synthetic stale-row and changed-dialog acceptance cases. See [Stage 07 verification](stage-7.md).
 
 Work: Associate each attachment with its source row and detect changed dialogs.
 
