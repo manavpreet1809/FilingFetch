@@ -8,6 +8,7 @@ import { join } from 'node:path';
 import type { Config } from '../config.js';
 import { DOCUMENT_TYPES, FilingError, type DocumentReference, type FilingRequest, type Matter } from '../domain.js';
 import { parseCounts, parseDate } from './parse.js';
+import { assertMatterIdentity } from './identity.js';
 import { safeFilename } from '../files/validate.js';
 
 export const UARB_URL = 'https://uarb.novascotia.ca/fmi/webd/UARB15';
@@ -40,9 +41,11 @@ export class UarbClient {
     const selectedType = initialCounts[request.documentType] ? request.documentType : DOCUMENT_TYPES.find(type => initialCounts[type] > 0);
     if (!selectedType) {
       const field = async (id: number) => (await this.page!.locator(`.fm_object_${id}`).innerText()).trim();
-      if (await field(286) !== request.matterNumber) throw new FilingError('WRONG_MATTER', 'The website returned a different matter');
+      const number = await field(286);
+      const title = (await this.page.locator('#b0p0o290i0i0r1').innerText()).trim();
+      assertMatterIdentity(request.matterNumber, number, title);
       return {
-        number: request.matterNumber, title: (await this.page.locator('#b0p0o290i0i0r1').innerText()).trim(),
+        number, title,
         status: await field(289) || null, type: await field(287) || null, category: await field(298) || null,
         receivedDate: parseDate(await field(292)), finalSubmissionDate: null, decisionDate: parseDate(await field(294)),
         outcome: await field(295) || null, counts: initialCounts, totalDocuments: 0, retrievedAt: new Date().toISOString(), sourceUrl: UARB_URL,
@@ -52,16 +55,15 @@ export class UarbClient {
     this.extensionField = selectedType === 'Key Documents' ? 284 : selectedType === 'Exhibits' ? 314 : 308;
     this.datedRows = selectedType === 'Transcripts' || selectedType === 'Recordings';
     await this.page.getByRole('button', { name: new RegExp(`^${selectedType} -`) }).click();
-    await this.page.waitForFunction(expected => document.querySelector('.fm_object_219')?.textContent?.trim() === expected, request.matterNumber);
+    await this.page.waitForFunction(() => Boolean(document.querySelector('.fm_object_219')?.textContent?.trim()));
     await this.page.waitForFunction(expected => document.querySelector('table[role="grid"]')?.getAttribute('aria-rowcount') === String(expected), initialCounts[selectedType]);
     await this.page.locator('tr.v-grid-row-has-data').first().getByRole('button', { name: 'GO GET IT', exact: true }).waitFor();
     await this.page.locator('.v-loading-indicator').waitFor({ state: 'hidden' });
     const field = async (id: number) => (await this.page!.locator(`.fm_object_${id}`).innerText()).trim();
     const number = await field(219);
-    if (number !== request.matterNumber) throw new FilingError('WRONG_MATTER', 'The website returned a different matter');
     const counts = initialCounts;
     const title = (await this.page.locator('#b0p0o223i0i0r1').innerText()).trim();
-    if (!title) throw new FilingError('PAGE_CHANGED', 'Matter title is missing');
+    assertMatterIdentity(request.matterNumber, number, title);
     return {
       number, title, status: await field(222) || null, type: await field(220) || null,
       category: await field(231) || null, receivedDate: parseDate(await field(225)),

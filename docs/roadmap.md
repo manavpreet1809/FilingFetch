@@ -26,7 +26,7 @@ Suggested commit: `Validate CLI inputs`
 
 ## Stage 03: Verify matter navigation
 
-Status: planned.
+Status: complete. See [Stage 03 verification](stage-3.md).
 
 Work: Confirm the requested matter opens and reject mismatched identifiers.
 

@@ -4,6 +4,7 @@ import { FilingError, requestSchema, type FilingRequest, type FetchResult, type 
 import { UarbClient } from './uarb/client.js';
 import { DocumentCache } from './cache/documents.js';
 import { validateFile } from './files/validate.js';
+import { assertMatterIdentity } from './uarb/identity.js';
 
 type DocumentSource = Pick<UarbClient, 'open' | 'visibleDocuments' | 'nextPage' | 'openAttachments' | 'download' | 'closeAttachments' | 'screenshot' | 'timedOut' | 'close'>;
 
@@ -14,9 +15,7 @@ export async function fetchDocuments(input: FilingRequest, config: Config, direc
   let result: FetchResult | undefined;
   try {
     const matter = await client.open(request);
-    if (matter.number !== request.matterNumber) {
-      throw new FilingError('WRONG_MATTER', 'The website returned a different matter');
-    }
+    assertMatterIdentity(request.matterNumber, matter.number, matter.title);
     result = { request, matter, files: [], skipped: [], warnings: [], listingExhausted: false };
     const retrieved = result;
     let totalBytes = 0;
