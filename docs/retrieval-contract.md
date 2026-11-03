@@ -16,7 +16,7 @@ Exactly two positional arguments are required: a matter number and document cate
 - Transcripts
 - Recordings
 
-`--limit` is an integer from 1 through 10 and defaults to 10. The limit counts accepted files, not document rows; one row may have multiple attachments. `--headed` displays the browser. `--output` selects an output directory; otherwise a directory is generated under `outputs/` using the matter number and a random suffix. Use a fresh directory because report and archive writes do not overwrite existing files.
+`--limit` accepts the decimal strings `1` through `10` and defaults to `10`. Scientific notation, hexadecimal, fractions, blank values, and leading-zero forms are rejected. The limit counts accepted files, not document rows; one row may have multiple attachments. `--headed` displays the browser. `--output` requires a nonblank directory path and selects an output directory; otherwise a directory is generated under `outputs/` using the matter number and a random suffix. Use a fresh directory because report and archive writes do not overwrite existing files.
 
 ## Configuration and limits
 
