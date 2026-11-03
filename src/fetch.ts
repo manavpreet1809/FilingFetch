@@ -5,6 +5,7 @@ import { UarbClient } from './uarb/client.js';
 import { DocumentCache } from './cache/documents.js';
 import { validateFile } from './files/validate.js';
 import { assertMatterIdentity } from './uarb/identity.js';
+import { DocumentListing } from './uarb/listing.js';
 
 type DocumentSource = Pick<UarbClient, 'open' | 'visibleDocuments' | 'nextPage' | 'openAttachments' | 'download' | 'closeAttachments' | 'screenshot' | 'timedOut' | 'close'>;
 
@@ -19,7 +20,7 @@ export async function fetchDocuments(input: FilingRequest, config: Config, direc
     result = { request, matter, files: [], skipped: [], warnings: [], listingExhausted: false };
     const retrieved = result;
     let totalBytes = 0;
-    const seen = new Set<string>();
+    const listing = new DocumentListing(matter.counts[request.documentType]);
     const accept = (file: FilingFile) => {
       // Reserve room for ZIP headers within the attachment budget.
       if (totalBytes + file.size > config.MAX_TOTAL_BYTES - 4096) {
@@ -34,9 +35,7 @@ export async function fetchDocuments(input: FilingRequest, config: Config, direc
     while (result.files.length < request.limit) {
       const visible = await client.visibleDocuments();
       if (!visible.length) throw new FilingError('PAGE_CHANGED', 'Document rows could not be read');
-      for (const doc of visible) {
-        if (seen.has(doc.id)) continue;
-        seen.add(doc.id);
+      for (const doc of listing.observe(visible)) {
         if (doc.security && doc.security.toLowerCase() !== 'public') {
           result.skipped.push({ documentId: doc.id, documentTitle: doc.title, reason: 'Document is not public' });
           continue;
@@ -87,10 +86,11 @@ export async function fetchDocuments(input: FilingRequest, config: Config, direc
         if (result.files.length >= request.limit) break;
       }
       if (result.files.length >= request.limit) break;
+      if (listing.size === matter.counts[request.documentType]) { result.listingExhausted = true; break; }
       if (!await client.nextPage()) { result.listingExhausted = true; break; }
     }
-    if (seen.size >= matter.counts[request.documentType]) result.listingExhausted = true;
-    if (result.listingExhausted && seen.size < matter.counts[request.documentType]) result.warnings.push(`The list ended after ${seen.size} of ${matter.counts[request.documentType]} document rows; results may be incomplete.`);
+    if (listing.size >= matter.counts[request.documentType]) result.listingExhausted = true;
+    if (result.listingExhausted && listing.size < matter.counts[request.documentType]) result.warnings.push(`The list ended after ${listing.size} of ${matter.counts[request.documentType]} document rows; results may be incomplete.`);
     return result;
   } catch (error) {
     await client.screenshot();

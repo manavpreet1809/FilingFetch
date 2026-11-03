@@ -46,7 +46,7 @@ Suggested commit: `Verify category counts`
 
 ## Stage 05: Verify document pagination
 
-Status: planned.
+Status: complete for synthetic multi-window traversal and the observed six-row live comparison; full live multi-window coverage remains unverified. See [Stage 05 verification](stage-5.md).
 
 Work: Traverse the virtualized list without omitting or repeating rows.
 

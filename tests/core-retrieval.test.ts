@@ -84,3 +84,22 @@ test('invalid CLI requests exit cleanly before starting retrieval', () => {
     assert.doesNotMatch(result.stdout, /Retrieving/); assert.doesNotMatch(result.stderr, /at .*cli\.ts/);
   }
 });
+
+test('repeated source windows fail without redownloading or leaving the source open', async () => {
+  await fixture(async (directory, config) => {
+    const counts = Object.fromEntries(DOCUMENT_TYPES.map(type => [type, type === request.documentType ? 5 : 0])) as Matter['counts'];
+    const fake = source(directory, [[doc('one')]], { counts });
+    fake.nextPage = async () => true;
+    await assert.rejects(fetchDocuments(request, config, directory, new DocumentCache(config), false, fake), /stopped making progress/);
+    assert.deepEqual(fake.downloads, ['one']); assert.equal(fake.closed, true);
+  });
+});
+test('three overlapping source windows exhaust exactly the advertised unique rows', async () => {
+  await fixture(async (directory, config) => {
+    const counts = Object.fromEntries(DOCUMENT_TYPES.map(type => [type, type === request.documentType ? 5 : 0])) as Matter['counts'];
+    const fake = source(directory, [[doc('one'),doc('two')], [doc('two'),doc('three'),doc('four')], [doc('four'),doc('five')]], { counts });
+    const result = await fetchDocuments({ ...request, limit: 10 }, config, directory, new DocumentCache(config), false, fake);
+    assert.deepEqual(fake.downloads, ['one','two','three','four','five']);
+    assert.equal(result.listingExhausted, true); assert.deepEqual(result.warnings, []); assert.equal(fake.closed, true);
+  });
+});
