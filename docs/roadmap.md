@@ -76,7 +76,7 @@ Suggested commit: `Verify attachment selection`
 
 ## Stage 08: Constrain download sources
 
-Status: planned.
+Status: complete for the offline URL/redirect acceptance cases. See [Stage 08 verification](stage-8.md).
 
 Work: Allow only expected source origins and paths; reject unexpected redirects.
 

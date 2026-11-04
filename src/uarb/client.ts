@@ -12,6 +12,7 @@ import { assertMatterIdentity } from './identity.js';
 import { publicAccessIssue } from './access.js';
 import { assertDocumentSelection, AttachmentSelection } from './attachments.js';
 import { safeFilename } from '../files/validate.js';
+import { downloadSourceUrl, fetchDownloadSource } from './download-source.js';
 
 export const UARB_URL = 'https://uarb.novascotia.ca/fmi/webd/UARB15';
 
@@ -153,15 +154,18 @@ export class UarbClient {
     const event = new Promise<Source>((yes, no) => { resolve = yes; reject = no; });
     const onDownload = (download: Download) => {
       // Linux Chromium can report a UTF-8 attachment as simply "download".
-      const url = new URL(download.url());
-      if (url.origin === new URL(UARB_URL).origin && url.pathname.startsWith('/fmi/webd/APP/connector/')) resolve({ download });
-      else {
-        void download.cancel();
+      try {
+        downloadSourceUrl(download.url());
+        resolve({ download });
+      } catch {
+        void download.cancel().catch(() => {});
         reject(new FilingError('DOWNLOAD_FAILED', 'Unexpected download location'));
       }
     };
     const onFailure = (request: Request) => {
-      if (request.failure()?.errorText.includes('ERR_RESPONSE_HEADERS_MULTIPLE_CONTENT_DISPOSITION')) resolve({ malformedHeaderUrl: request.url() });
+      if (!request.failure()?.errorText.includes('ERR_RESPONSE_HEADERS_MULTIPLE_CONTENT_DISPOSITION')) return;
+      try { downloadSourceUrl(request.url()); resolve({ malformedHeaderUrl: request.url() }); }
+      catch { reject(new FilingError('DOWNLOAD_FAILED', 'Unexpected download location')); }
     };
     this.page!.on('download', onDownload);
     this.page!.on('requestfailed', onFailure);
@@ -197,14 +201,11 @@ export class UarbClient {
   }
 
   private async downloadFromSource(url: string, doc: DocumentReference, index: number, originalFilename: string) {
-    const target = new URL(url);
-    if (target.origin !== new URL(UARB_URL).origin || !target.pathname.startsWith('/fmi/webd/APP/connector/')) {
-      throw new FilingError('DOWNLOAD_FAILED', 'Unexpected download location');
-    }
+    downloadSourceUrl(url);
     const filename = safeFilename(`${doc.id}-${index + 1}-${originalFilename}`);
     const path = join(this.directory, filename);
     const cookies = await this.page!.context().cookies(url);
-    const response = await fetch(url, { headers: { Cookie: cookies.map(cookie => `${cookie.name}=${cookie.value}`).join('; ') }, redirect: 'error', signal: AbortSignal.timeout(this.config.DOWNLOAD_TIMEOUT_MS) });
+    const response = await fetchDownloadSource(url, cookies.map(cookie => `${cookie.name}=${cookie.value}`).join('; '), AbortSignal.timeout(this.config.DOWNLOAD_TIMEOUT_MS));
     try {
       if (!response.ok || !response.body) {
         await response.body?.cancel();
