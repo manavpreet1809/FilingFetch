@@ -3,6 +3,7 @@ import { readFile, stat } from 'node:fs/promises';
 import { basename, extname } from 'node:path';
 import { fileTypeFromBuffer } from 'file-type';
 import { PDFDocument } from 'pdf-lib';
+import { unzipSync } from 'fflate';
 import { FilingError, type ValidatedFile } from '../domain.js';
 
 export function safeFilename(name: string): string {
@@ -16,12 +17,15 @@ export async function validateFile(path: string, filename: string, maxBytes: num
   const { size } = await stat(path);
   if (!size || size > maxBytes) throw new FilingError('FILE_SIZE', 'File is empty or exceeds the size limit');
   const bytes = await readFile(path);
-  const prefix = bytes.subarray(0, 1024).toString('utf8').trimStart();
+  if (bytes.length !== size || bytes.length > maxBytes) throw new FilingError('FILE_SIZE', 'File changed or exceeds the size limit');
+  const prefix = bytes.subarray(0, 4096).toString('utf8').replace(/^\uFEFF/, '').trimStart().replace(/^(?:<!--[\s\S]*?-->\s*)+/, '');
   if (/^(<!doctype\s+html|<html|<head|<body)/i.test(prefix)) {
     throw new FilingError('INVALID_FILE', 'Download returned an HTML page');
   }
   const extension = extname(filename).slice(1).toLowerCase();
-  const detected = await fileTypeFromBuffer(bytes);
+  let detected: Awaited<ReturnType<typeof fileTypeFromBuffer>>;
+  try { detected = await fileTypeFromBuffer(bytes); }
+  catch { throw new FilingError('INVALID_FILE', 'File signature is truncated or malformed'); }
   let validation: ValidatedFile['validation'] = 'signature';
   let mimeType = detected?.mime;
   if (extension === 'pdf' || detected?.ext === 'pdf') {
@@ -34,7 +38,7 @@ export async function validateFile(path: string, filename: string, maxBytes: num
     }
     validation = 'pdf-parsed';
   } else if (['txt', 'csv'].includes(extension)) {
-    if (detected || bytes.includes(0)) throw new FilingError('INVALID_FILE', 'Expected a text file');
+    if (detected || bytes.includes(0) || bytes.some(byte => byte < 32 && ![9, 10, 13].includes(byte))) throw new FilingError('INVALID_FILE', 'Expected a text file');
     try { new TextDecoder('utf-8', { fatal: true }).decode(bytes); } catch {
       throw new FilingError('INVALID_FILE', 'Text is not valid UTF-8');
     }
@@ -45,6 +49,22 @@ export async function validateFile(path: string, filename: string, maxBytes: num
     if (!detected || !(aliases[detected.ext] ?? [detected.ext]).includes(extension)) {
       throw new FilingError('INVALID_FILE', 'Unsupported file type or signature does not match the filename');
     }
+  }
+  if (detected && ['zip', 'docx', 'xlsx', 'pptx', 'odt', 'ods', 'odp'].includes(detected.ext)) {
+    try {
+      let expanded = 0;
+      let entries = 0;
+      const unpacked = unzipSync(bytes, { filter: entry => {
+        expanded += entry.originalSize;
+        if (++entries > 10_000 || !Number.isSafeInteger(expanded) || expanded > maxBytes) throw new Error('Container expansion limit');
+        return true;
+      } });
+      const required: Record<string, string> = { docx: 'word/document.xml', xlsx: 'xl/workbook.xml', pptx: 'ppt/presentation.xml' };
+      if (required[detected.ext]) {
+        if (!unpacked['[Content_Types].xml'] || !unpacked[required[detected.ext]!]) throw new Error('Missing Office document parts');
+        validation = 'office-container';
+      }
+    } catch { throw new FilingError('INVALID_FILE', 'Archive is unreadable or exceeds container validation limits'); }
   }
   return { path, filename: safeFilename(filename), size, sha256: createHash('sha256').update(bytes).digest('hex'), mimeType: mimeType!, validation };
 }

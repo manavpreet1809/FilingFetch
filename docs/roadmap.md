@@ -96,7 +96,7 @@ Suggested commit: `Bound downloads and timeouts`
 
 ## Stage 10: Validate file content
 
-Status: planned.
+Status: complete for the synthetic content-validation acceptance cases. See [Stage 10 verification](stage-10.md).
 
 Work: Check signatures, filename extensions, text encoding, and PDF readability.
 
