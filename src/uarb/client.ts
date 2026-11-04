@@ -1,8 +1,4 @@
 import { chromium, type Browser, type Page, type Locator, type Download, type Request } from 'playwright';
-import { createWriteStream } from 'node:fs';
-import { rm } from 'node:fs/promises';
-import { pipeline } from 'node:stream/promises';
-import { Readable, Transform } from 'node:stream';
 import { createHash } from 'node:crypto';
 import { join } from 'node:path';
 import type { Config } from '../config.js';
@@ -12,7 +8,8 @@ import { assertMatterIdentity } from './identity.js';
 import { publicAccessIssue } from './access.js';
 import { assertDocumentSelection, AttachmentSelection } from './attachments.js';
 import { safeFilename } from '../files/validate.js';
-import { downloadSourceUrl, fetchDownloadSource } from './download-source.js';
+import { downloadSourceUrl } from './download-source.js';
+import { saveBoundedDownload } from './download-stream.js';
 
 export const UARB_URL = 'https://uarb.novascotia.ca/fmi/webd/UARB15';
 
@@ -21,6 +18,7 @@ export class UarbClient {
   private page?: Page;
   private timer?: NodeJS.Timeout;
   private expired = false;
+  private jobAbort = new AbortController();
   private idField = 201;
   private extensionField = 308;
   private datedRows = false;
@@ -29,7 +27,11 @@ export class UarbClient {
 
   async open(request: FilingRequest): Promise<Matter> {
     this.browser = await chromium.launch({ headless: !this.headed });
-    this.timer = setTimeout(() => { this.expired = true; void this.browser?.close(); }, this.config.JOB_TIMEOUT_MS);
+    this.timer = setTimeout(() => {
+      this.expired = true;
+      this.jobAbort.abort(new FilingError('JOB_TIMEOUT', 'Retrieval exceeded its time limit'));
+      void this.browser?.close().catch(() => {});
+    }, this.config.JOB_TIMEOUT_MS);
     this.page = await this.browser.newPage({ acceptDownloads: true, viewport: { width: 1280, height: 720 } });
     this.page.setDefaultTimeout(this.config.STEP_TIMEOUT_MS);
     await this.page.goto(UARB_URL, { waitUntil: 'domcontentloaded' });
@@ -186,41 +188,17 @@ export class UarbClient {
     finally { await download.delete().catch(() => {}); }
   }
 
-  private async saveStream(stream: Readable, path: string) {
-    let received = 0;
-    let header = Buffer.alloc(0);
-    const limiter = new Transform({ transform: (chunk: Buffer, _, callback) => {
-      received += chunk.length;
-      header = Buffer.concat([header, chunk.subarray(0, Math.max(0, 12 - header.length))]);
-      const declaredSize = header.length === 12 && header.toString('ascii', 0, 4) === 'RIFF'
-        && header.toString('ascii', 8, 12) === 'WAVE' ? header.readUInt32LE(4) + 8 : 0;
-      const tooLarge = Math.max(received, declaredSize) > this.config.MAX_FILE_BYTES;
-      callback(tooLarge ? new FilingError('FILE_SIZE', `File exceeds the ${this.config.MAX_FILE_BYTES / 1_000_000} MB attachment limit`) : null, chunk);
-    } });
-    await pipeline(stream, limiter, createWriteStream(path));
-  }
-
   private async downloadFromSource(url: string, doc: DocumentReference, index: number, originalFilename: string) {
     downloadSourceUrl(url);
     const filename = safeFilename(`${doc.id}-${index + 1}-${originalFilename}`);
     const path = join(this.directory, filename);
     const cookies = await this.page!.context().cookies(url);
-    const response = await fetchDownloadSource(url, cookies.map(cookie => `${cookie.name}=${cookie.value}`).join('; '), AbortSignal.timeout(this.config.DOWNLOAD_TIMEOUT_MS));
-    try {
-      if (!response.ok || !response.body) {
-        await response.body?.cancel();
-        throw new FilingError('DOWNLOAD_FAILED', `Source returned HTTP ${response.status}`);
-      }
-      if (Number(response.headers.get('content-length')) > this.config.MAX_FILE_BYTES) {
-        await response.body.cancel();
-        throw new FilingError('FILE_SIZE', 'File exceeds the size limit');
-      }
-      await this.saveStream(Readable.fromWeb(response.body as Parameters<typeof Readable.fromWeb>[0]), path);
-      return { path, filename };
-    } catch (error) {
-      await rm(path, { force: true });
-      throw error;
-    }
+    await saveBoundedDownload({
+      url, path, cookie: cookies.map(cookie => `${cookie.name}=${cookie.value}`).join('; '),
+      maxBytes: this.config.MAX_FILE_BYTES, timeoutMs: this.config.DOWNLOAD_TIMEOUT_MS,
+      signal: this.jobAbort.signal,
+    });
+    return { path, filename };
   }
 
   async closeAttachments(): Promise<void> {
@@ -245,6 +223,7 @@ export class UarbClient {
 
   async close(): Promise<void> {
     clearTimeout(this.timer);
+    this.jobAbort.abort(new FilingError('DOWNLOAD_FAILED', 'Retrieval closed'));
     await this.browser?.close();
   }
 }

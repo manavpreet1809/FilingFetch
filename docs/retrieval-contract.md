@@ -85,3 +85,12 @@ selection through download. Reopening for a retry must match the original list.
 Changed row or dialog evidence is reported as a skipped file with a clear reason,
 not silently retried against a different attachment. This guards the observed UI
 state but cannot make a later server-side change atomic with a click.
+
+## Download source and transfer boundaries
+
+Attachment URLs must use the exact HTTPS UARB origin and connector path. Redirects
+and changed response locations are rejected before bytes can be accepted.
+Transfers are byte-limited and use a unique temporary file, promoted only after
+completion. Failure removes partial bytes. The response-header/body deadline is
+separate from the browser download-event deadline; the job deadline cancels active
+streams as well as browser work. See [Stage 08](stage-8.md) and [Stage 09](stage-9.md).

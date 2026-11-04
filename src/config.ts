@@ -12,7 +12,7 @@ const settingsSchema = z.object({
   MAX_FILE_BYTES: z.coerce.number().int().positive().max(100_000_000).default(20_000_000),
   MAX_TOTAL_BYTES: z.coerce.number().int().positive().max(100_000_000).default(20_000_000),
   STEP_TIMEOUT_MS: z.coerce.number().int().positive().default(30_000),
-  DOWNLOAD_TIMEOUT_MS: z.coerce.number().int().positive().default(60_000),
+  DOWNLOAD_TIMEOUT_MS: z.coerce.number().int().positive().max(2_147_483_647).default(60_000),
   JOB_TIMEOUT_MS: z.coerce.number().int().positive().max(900_000).default(600_000),
   DOWNLOAD_ATTEMPTS: z.coerce.number().int().min(1).max(3).default(2),
 }).superRefine((settings, ctx) => {

@@ -86,7 +86,7 @@ Suggested commit: `Constrain download sources`
 
 ## Stage 09: Bound downloads and timeouts
 
-Status: planned.
+Status: complete for synthetic stream, cancellation and filesystem acceptance cases. See [Stage 09 verification](stage-9.md).
 
 Work: Enforce streamed byte limits and ensure timed-out downloads are cleaned up.
 
