@@ -106,7 +106,7 @@ Suggested commit: `Validate file content`
 
 ## Stage 11: Prevent filename collisions
 
-Status: planned.
+Status: complete for the synthetic filesystem, download and cache-restoration acceptance cases. See [Stage 11 verification](stage-11.md).
 
 Work: Sanitize unsafe names and preserve distinct files with colliding normalized names.
 

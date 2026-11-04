@@ -193,12 +193,11 @@ export class UarbClient {
     const filename = safeFilename(`${doc.id}-${index + 1}-${originalFilename}`);
     const path = join(this.directory, filename);
     const cookies = await this.page!.context().cookies(url);
-    await saveBoundedDownload({
+    return await saveBoundedDownload({
       url, path, cookie: cookies.map(cookie => `${cookie.name}=${cookie.value}`).join('; '),
       maxBytes: this.config.MAX_FILE_BYTES, timeoutMs: this.config.DOWNLOAD_TIMEOUT_MS,
       signal: this.jobAbort.signal,
     });
-    return { path, filename };
   }
 
   async closeAttachments(): Promise<void> {

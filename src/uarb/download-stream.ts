@@ -1,6 +1,8 @@
 import { createWriteStream } from 'node:fs';
-import { rename, rm } from 'node:fs/promises';
+import { rm } from 'node:fs/promises';
 import { randomUUID } from 'node:crypto';
+import { basename, dirname } from 'node:path';
+import { publishUniqueFile } from '../files/names.js';
 import { Readable, Transform } from 'node:stream';
 import { pipeline } from 'node:stream/promises';
 import { FilingError } from '../domain.js';
@@ -17,7 +19,7 @@ interface DownloadOptions {
 }
 
 /** Bound response headers and streamed bytes, publishing only a complete transfer. */
-export async function saveBoundedDownload(options: DownloadOptions): Promise<void> {
+export async function saveBoundedDownload(options: DownloadOptions): Promise<{ path: string; filename: string }> {
   if (!Number.isSafeInteger(options.maxBytes) || options.maxBytes <= 0
       || !Number.isSafeInteger(options.timeoutMs) || options.timeoutMs <= 0 || options.timeoutMs > 2_147_483_647) {
     throw new FilingError('DOWNLOAD_FAILED', 'Invalid download limits');
@@ -48,7 +50,7 @@ export async function saveBoundedDownload(options: DownloadOptions): Promise<voi
     await pipeline(Readable.fromWeb(response.body as Parameters<typeof Readable.fromWeb>[0]), limiter,
       createWriteStream(temporary, { flags: 'wx' }), { signal });
     signal.throwIfAborted();
-    await rename(temporary, options.path);
+    return await publishUniqueFile(temporary, dirname(options.path), basename(options.path));
   } catch (error) {
     if (signal.aborted) {
       if (signal.reason instanceof FilingError) throw signal.reason;

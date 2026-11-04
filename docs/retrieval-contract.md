@@ -94,3 +94,10 @@ Transfers are byte-limited and use a unique temporary file, promoted only after
 completion. Failure removes partial bytes. The response-header/body deadline is
 separate from the browser download-event deadline; the job deadline cancels active
 streams as well as browser work. See [Stage 08](stage-8.md) and [Stage 09](stage-9.md).
+
+## Collision-safe output names
+
+Sanitized names are published without replacing existing files or symlinks.
+Collisions receive a numbered suffix; reports and cache results retain the actual
+published filename. Downloads and cache restores share the same atomic publication
+path. See [Stage 11](stage-11.md) for filesystem requirements and tested boundaries.

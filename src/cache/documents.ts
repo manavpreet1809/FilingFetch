@@ -1,11 +1,12 @@
 import { createHash, randomUUID } from 'node:crypto';
-import { mkdir, copyFile, readFile, writeFile, rename } from 'node:fs/promises';
+import { mkdir, copyFile, readFile, writeFile, rename, open, rm } from 'node:fs/promises';
 import { join } from 'node:path';
 import { Storage } from '@google-cloud/storage';
 import type { Pool } from 'pg';
 import type { Config } from '../config.js';
 import type { DocumentReference, FilingFile, FilingRequest } from '../domain.js';
 import { validateFile, safeFilename } from '../files/validate.js';
+import { publishUniqueFile } from '../files/names.js';
 
 interface StoredFile extends Omit<FilingFile, 'path' | 'cacheHit'> { key: string }
 interface Entry { fingerprint: string; expiresAt: string; files: StoredFile[] }
@@ -46,13 +47,18 @@ export class DocumentCache {
     const result: FilingFile[] = [];
     for (const file of entry.files.slice(0, limit)) {
       if (!/^objects\/[a-f0-9]{64}$/.test(file.key) || file.filename !== safeFilename(file.filename)) throw new Error('Invalid cache manifest');
-      const path = join(directory, file.filename);
-      if (this.storage) await this.storage.bucket(this.config.GCS_CACHE_BUCKET!).file(file.key).download({ destination: path, validation: 'crc32c' });
-      else await copyFile(join(this.config.CACHE_DIRECTORY, file.key), path);
-      const validated = await validateFile(path, file.filename, this.config.MAX_FILE_BYTES);
-      if (validated.sha256 !== file.sha256 || validated.size !== file.size) throw new Error('Cached file failed integrity check');
-      const { key: _, ...metadata } = file;
-      result.push({ ...metadata, ...validated, cacheHit: true });
+      const temporary = join(directory, `.cache-${randomUUID()}.part`);
+      const reservation = await open(temporary, 'wx');
+      await reservation.close();
+      try {
+        if (this.storage) await this.storage.bucket(this.config.GCS_CACHE_BUCKET!).file(file.key).download({ destination: temporary, validation: 'crc32c' });
+        else await copyFile(join(this.config.CACHE_DIRECTORY, file.key), temporary);
+        const validated = await validateFile(temporary, file.filename, this.config.MAX_FILE_BYTES);
+        if (validated.sha256 !== file.sha256 || validated.size !== file.size) throw new Error('Cached file failed integrity check');
+        const published = await publishUniqueFile(temporary, directory, file.filename);
+        const { key: _, ...metadata } = file;
+        result.push({ ...metadata, ...validated, ...published, cacheHit: true });
+      } finally { await rm(temporary, { force: true }); }
     }
     return result;
   }

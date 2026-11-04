@@ -7,10 +7,11 @@ import { unzipSync } from 'fflate';
 import { FilingError, type ValidatedFile } from '../domain.js';
 
 export function safeFilename(name: string): string {
-  const clean = basename(name.replaceAll('\\', '/')).normalize('NFKC')
+  const clean = basename(name.normalize('NFKC').replaceAll('\\', '/'))
     .replace(/[^a-zA-Z0-9._-]/g, '_').replace(/^\.+/, '');
-  const extension = extname(clean).slice(0, 12);
-  return (clean.length > 160 ? clean.slice(0, 160 - extension.length) + extension : clean) || 'document';
+  const portable = /^(con|prn|aux|nul|com[1-9]|lpt[1-9])(?:\.|$)/i.test(clean) ? `_${clean}` : clean;
+  const extension = extname(portable).slice(0, 12);
+  return (portable.length > 160 ? portable.slice(0, 160 - extension.length) + extension : portable).replace(/\.+$/, '') || 'document';
 }
 
 export async function validateFile(path: string, filename: string, maxBytes: number): Promise<ValidatedFile> {
