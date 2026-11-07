@@ -146,7 +146,7 @@ Suggested commit: `Verify local document caching`
 
 ## Stage 15: Record core retrieval acceptance
 
-Status: planned.
+Status: acceptance evidence recorded for live success, empty and partial-failure cases; broader live coverage remains unverified. See [Stage 15 verification](stage-15.md).
 
 Work: Run representative public-source retrievals and document source comparisons.
 

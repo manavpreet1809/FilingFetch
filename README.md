@@ -14,7 +14,7 @@ Cloud setup and deployment scripts use the `filingfetch` resource prefix. Existi
 
 ## Stage 1: Core retrieval
 
-See [setup, CLI usage, tests, and live acceptance checklist](docs/stage-1.md). Run `npm test` for offline core-retrieval checks. Live source acceptance remains pending.
+See [setup, CLI usage, tests, and live acceptance checklist](docs/stage-1.md). Run `npm test` for offline core-retrieval checks. Limited live retrieval evidence is recorded in [Stage 15](docs/stage-15.md): one validated PDF and an empty category passed; Exhibits returned a documented partial failure. Broader live coverage remains unverified.
 
 ## Development plan
 

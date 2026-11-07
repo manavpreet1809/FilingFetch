@@ -40,7 +40,7 @@ export class UarbClient {
     await this.page.locator('[contenteditable="true"]').fill(request.matterNumber);
     await this.page.locator('[contenteditable="true"]').press('Tab');
     await this.page.locator('#b0p0o258i0i0r1').click();
-    try { await this.page.getByRole('button', { name: /^Exhibits -/ }).waitFor(); }
+    try { await this.page.locator('button').filter({ hasText: /^Exhibits -/ }).waitFor(); }
     catch { throw new FilingError('MATTER_NOT_FOUND', `Could not open ${request.matterNumber}; check the matter number or try again`); }
     await this.waitForCounts();
     const initialCounts = parseCounts(await this.page.locator('button').allTextContents());
@@ -60,10 +60,10 @@ export class UarbClient {
     this.idField = selectedType === 'Key Documents' ? 268 : selectedType === 'Exhibits' ? 300 : 201;
     this.extensionField = selectedType === 'Key Documents' ? 284 : selectedType === 'Exhibits' ? 314 : 308;
     this.datedRows = selectedType === 'Transcripts' || selectedType === 'Recordings';
-    await this.page.getByRole('button', { name: new RegExp(`^${selectedType} -`) }).click();
+    await this.page.locator('button').filter({ hasText: new RegExp(`^${selectedType} -`) }).click();
     await this.page.waitForFunction(() => Boolean(document.querySelector('.fm_object_219')?.textContent?.trim()));
     await this.page.waitForFunction(expected => document.querySelector('table[role="grid"]')?.getAttribute('aria-rowcount') === String(expected), initialCounts[selectedType]);
-    await this.page.locator('tr.v-grid-row-has-data').first().getByRole('button', { name: 'GO GET IT', exact: true }).waitFor();
+    await this.page.locator('tr.v-grid-row-has-data').first().locator('button').filter({ hasText: /^GO GET IT$/ }).waitFor();
     await this.page.locator('.v-loading-indicator').waitFor({ state: 'hidden' });
     const field = async (id: number) => (await this.page!.locator(`.fm_object_${id}`).innerText()).trim();
     const number = await field(219);
@@ -130,10 +130,10 @@ export class UarbClient {
     if (accessIssue) throw new FilingError('NOT_PUBLIC', accessIssue);
     await this.closeAttachments();
     assertDocumentSelection(doc, await this.visibleDocuments());
-    await this.row(doc).getByRole('button', { name: 'GO GET IT', exact: true }).click();
+    await this.row(doc).locator('button').filter({ hasText: /^GO GET IT$/ }).click();
     await this.page!.getByText('Export Field to File', { exact: true }).or(this.page!.getByText('Download Files', { exact: true })).first().waitFor();
     if (await this.page!.getByText('Export Field to File', { exact: true }).isVisible()) {
-      await this.page!.getByRole('button', { name: 'OK', exact: true }).click();
+      await this.page!.locator('button').filter({ hasText: /^OK$/ }).click();
     }
     await this.page!.getByText('Download Files', { exact: true }).waitFor();
     const buttons = this.page!.locator('.fm-download-button');
@@ -202,13 +202,13 @@ export class UarbClient {
 
   async closeAttachments(): Promise<void> {
     this.attachments.clear();
-    const close = this.page?.getByRole('button', { name: 'Close', exact: true });
+    const close = this.page?.locator('button').filter({ hasText: /^Close$/ });
     if (close && await close.isVisible()) {
       await close.click();
       await close.waitFor({ state: 'hidden' });
     }
     if (await this.page?.getByText('Export Field to File', { exact: true }).isVisible()) {
-      await this.page!.getByRole('button', { name: 'Cancel', exact: true }).click();
+      await this.page!.locator('button').filter({ hasText: /^Cancel$/ }).click();
       await this.page!.getByText('Export Field to File', { exact: true }).waitFor({ state: 'hidden' });
     }
     if (this.page && !this.page.isClosed()) await this.page.locator('.v-loading-indicator').waitFor({ state: 'hidden' });

@@ -1,0 +1,71 @@
+{
+  "date": "2026-11-07",
+  "sourceUrl": "https://uarb.novascotia.ca/fmi/webd/UARB15",
+  "matterNumber": "M12205",
+  "matterTitle": "Halifax Regional Water Commission - Windsor Street Exchange Redevelopment Project - $69,275,000",
+  "sourceCounts": {
+    "Exhibits": 13,
+    "Key Documents": 6,
+    "Other Documents": 44,
+    "Transcripts": 0,
+    "Recordings": 0
+  },
+  "cacheBackend": "off",
+  "databaseEnabled": false,
+  "limits": {
+    "fileBytes": 20000000,
+    "totalBytes": 20000000,
+    "jobTimeoutMs": 90000,
+    "stepTimeoutMs": 15000
+  },
+  "cases": [
+    {
+      "category": "Key Documents",
+      "limit": 1,
+      "exitCode": 0,
+      "files": [
+        {
+          "filename": "97289-1-97289.pdf",
+          "size": 119742,
+          "sha256": "18c1783451a3e849c1373df5e451e85c60ce66483b82190a0170926129ec8571",
+          "mimeType": "application/pdf",
+          "validation": "pdf-parsed",
+          "documentId": "97289",
+          "documentTitle": "Notice of Paper Hearing",
+          "originalFilename": "97289.pdf",
+          "downloadedAt": "2026-11-07T12:02:19.262Z",
+          "cacheHit": false
+        }
+      ],
+      "warnings": [],
+      "skippedCount": 0,
+      "listingExhausted": true,
+      "diskReportZipComparison": "passed"
+    },
+    {
+      "category": "Transcripts",
+      "limit": 1,
+      "exitCode": 0,
+      "acceptedFiles": 0,
+      "archive": null,
+      "warnings": [],
+      "listingExhausted": true,
+      "noZipOnDisk": true
+    },
+    {
+      "category": "Exhibits",
+      "limit": 1,
+      "exitCode": 2,
+      "acceptedFiles": 0,
+      "archive": null,
+      "skippedEntries": 12,
+      "sizeLimitRejections": 1,
+      "restrictedRowsSkipped": 6,
+      "dialogFailures": 5,
+      "warnings": [
+        "Retrieval reached its time limit; some documents could not be checked. You can access the remaining files on UARB."
+      ],
+      "listingExhausted": false
+    }
+  ]
+}
