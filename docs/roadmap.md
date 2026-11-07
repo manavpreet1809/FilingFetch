@@ -166,7 +166,7 @@ Suggested commit: `Document Gmail OAuth setup`
 
 ## Stage 17: Verify incoming email parsing
 
-Status: planned.
+Status: complete for synthetic MIME and mocked Gmail response cases. See [Stage 17](stage-17.md).
 
 Work: Parse MIME messages and filter self-generated, automated, and unsuitable messages.
 

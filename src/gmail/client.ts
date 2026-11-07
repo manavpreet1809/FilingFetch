@@ -25,6 +25,29 @@ export function canonicalEmail(email: string) {
     ? `${local!.replaceAll('.', '').split('+')[0]}@gmail.com` : value;
 }
 
+/** Decode bounded synthetic or Gmail raw MIME without performing network requests. */
+export async function parseIncomingEmail(id: string, threadId: string, raw: string, mailbox: string): Promise<IncomingEmail | null> {
+  if (!id || !threadId || typeof raw !== 'string' || !/^[A-Za-z0-9_-]+={0,2}$/.test(raw) || raw.length > 2_666_668) return null;
+  const bytes = Buffer.from(raw, 'base64url');
+  if (!bytes.length || bytes.length > 2_000_000) return null;
+  const parsed = await simpleParser(bytes, { skipHtmlToText: false, skipTextToHtml: true });
+  if (parsed.headerLines.filter(header => header.key === 'from').length !== 1) return null;
+  const from = parsed.from?.value;
+  if (from?.length !== 1 || !from[0]?.address || canonicalEmail(from[0].address) === canonicalEmail(mailbox)) return null;
+  if (/[^\x21-\x7e]/.test(from[0].address) || !/^[^<>\s]+@[^<>\s]+\.[^<>\s]+$/.test(from[0].address)) return null;
+  if (/^(?:no[._-]?reply|do[._-]?not[._-]?reply|mailer[._-]?daemon|postmaster)(?:[+._-][^@]*)?@/i.test(from[0].address)) return null;
+  const autoSubmitted = parsed.headers.get('auto-submitted');
+  if ((autoSubmitted && String(autoSubmitted).toLowerCase() !== 'no') || parsed.headerLines.some(header => ['list-id', 'x-filing-agent'].includes(header.key))) return null;
+  if (/bulk|list|junk/i.test(String(parsed.headers.get('precedence') ?? ''))) return null;
+  if (!(parsed.text ?? '').trim()) return null;
+  return {
+    id, threadId, from: from[0].address,
+    subject: (parsed.subject ?? '').slice(0, 500), text: (parsed.text ?? '').slice(0, 20_000),
+    messageId: parsed.messageId,
+    references: typeof parsed.references === 'string' ? [parsed.references] : (parsed.references ?? []).slice(-15),
+  };
+}
+
 export class GmailClient {
   private constructor(private auth: OAuth2Client, readonly mailbox: string) {}
 
@@ -58,22 +81,10 @@ export class GmailClient {
   async readIncoming(id: string): Promise<IncomingEmail | null> {
     const metadata = await this.request<{ labelIds?: string[]; sizeEstimate: number }>(`messages/${encodeURIComponent(id)}?format=minimal`);
     if (metadata.labelIds?.some(label => ['SENT', 'DRAFT', 'SPAM', 'TRASH'].includes(label))) return null;
-    if (metadata.sizeEstimate > 2_000_000) return null;
+    if (!Number.isSafeInteger(metadata.sizeEstimate) || metadata.sizeEstimate <= 0 || metadata.sizeEstimate > 2_000_000) return null;
     const message = await this.request<{ id: string; threadId: string; raw: string }>(`messages/${encodeURIComponent(id)}?format=raw`);
-    const parsed = await simpleParser(Buffer.from(message.raw, 'base64url'), { skipHtmlToText: false, skipTextToHtml: true });
-    const from = parsed.from?.value;
-    if (from?.length !== 1 || !from[0]?.address || canonicalEmail(from[0].address) === canonicalEmail(this.mailbox)) return null;
-    if (/[^\x21-\x7e]/.test(from[0].address) || !/^[^<>\s]+@[^<>\s]+\.[^<>\s]+$/.test(from[0].address)) return null;
-    if (/^(?:no[._-]?reply|do[._-]?not[._-]?reply|mailer[._-]?daemon|postmaster)(?:[+._-][^@]*)?@/i.test(from[0].address)) return null;
-    const autoSubmitted = parsed.headers.get('auto-submitted');
-    if ((autoSubmitted && String(autoSubmitted).toLowerCase() !== 'no') || parsed.headers.has('list-id') || parsed.headers.has('x-filing-agent')) return null;
-    if (/bulk|list|junk/i.test(String(parsed.headers.get('precedence') ?? ''))) return null;
-    return {
-      id: message.id, threadId: message.threadId, from: from[0].address,
-      subject: (parsed.subject ?? '').slice(0, 500), text: (parsed.text ?? '').slice(0, 20_000),
-      messageId: parsed.messageId,
-      references: typeof parsed.references === 'string' ? [parsed.references] : (parsed.references ?? []).slice(-15),
-    };
+    if (message.id !== id) return null;
+    return parseIncomingEmail(message.id, message.threadId, message.raw, this.mailbox);
   }
 
   async composeReply(email: IncomingEmail, text: string | ReplyContent, messageId: string, attachment?: string) {

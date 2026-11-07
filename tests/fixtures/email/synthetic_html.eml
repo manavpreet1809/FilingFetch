@@ -1,0 +1,7 @@
+From: requester@example.com
+To: agent@example.com
+Subject: HTML request
+MIME-Version: 1.0
+Content-Type: text/html; charset=utf-8
+
+<p>Please send <strong>Exhibits</strong> for M12205.</p>

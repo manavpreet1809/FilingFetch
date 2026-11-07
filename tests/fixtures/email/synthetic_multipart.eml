@@ -1,0 +1,28 @@
+From: Synthetic Requester <requester@example.com>
+To: agent@example.com
+Subject: =?UTF-8?Q?Filing_request_=E2=80=94_M12205?=
+Message-ID: <synthetic-request@example.com>
+References: <synthetic-parent@example.com> <synthetic-root@example.com>
+MIME-Version: 1.0
+Content-Type: multipart/mixed; boundary="synthetic-mixed"
+
+--synthetic-mixed
+Content-Type: multipart/alternative; boundary="synthetic-alt"
+
+--synthetic-alt
+Content-Type: text/plain; charset=utf-8
+Content-Transfer-Encoding: quoted-printable
+
+Please send Key Documents for M12205. Caf=C3=A9.
+--synthetic-alt
+Content-Type: text/html; charset=utf-8
+
+<p>Alternative HTML should not replace the plain text.</p>
+--synthetic-alt--
+--synthetic-mixed
+Content-Type: text/plain
+Content-Disposition: attachment; filename="synthetic-attachment.txt"
+Content-Transfer-Encoding: base64
+
+QXR0YWNobWVudCBjb250ZW50IGlzIG5vdCB0aGUgcmVxdWVzdA==
+--synthetic-mixed--
