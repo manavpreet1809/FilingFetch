@@ -4,6 +4,7 @@ import { mkdtemp, rm, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { spawnSync } from 'node:child_process';
+import { createRetrievalReport } from '../src/report.js';
 import { fetchDocuments } from '../src/fetch.js';
 import { DocumentCache } from '../src/cache/documents.js';
 import { readConfig } from '../src/config.js';
@@ -125,5 +126,19 @@ test('changed attachment selection is not retried and its reason stays in the re
     const result = await fetchDocuments(request, config, directory, new DocumentCache(config), false, fake);
     assert.equal(attempts, 1); assert.deepEqual(result.files, []);
     assert.match(result.skipped[0]!.reason, /Attachment list changed/); assert.equal(fake.closed, true);
+  });
+});
+
+
+test('interrupted retrieval preserves accepted evidence and warning in the serialized report', async () => {
+  await fixture(async (directory, config) => {
+    const fake = source(directory, [[doc('one')], [doc('two')]]);
+    fake.nextPage = async () => { fake.timedOut = true; throw new FilingError('JOB_TIMEOUT', 'Synthetic timeout'); };
+    const result = await fetchDocuments(request, config, directory, new DocumentCache(config), false, fake);
+    const report = createRetrievalReport(result, join(directory, 'partial.zip'));
+    assert.equal(report.files.length, 1); assert.equal(report.files[0]!.documentId, 'one');
+    assert.equal(report.listingExhausted, false); assert.match(report.warnings.join(' '), /time limit/);
+    assert.equal(report.archive, 'partial.zip'); assert.equal(fake.closed, true);
+    assert.equal(JSON.stringify(report).includes(directory), false);
   });
 });

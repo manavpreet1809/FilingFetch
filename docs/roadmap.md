@@ -126,7 +126,7 @@ Suggested commit: `Verify ZIP packaging`
 
 ## Stage 13: Verify retrieval reports
 
-Status: planned.
+Status: complete for synthetic report and interrupted-retrieval cases. See [Stage 13 verification](stage-13.md).
 
 Work: Write source metadata, counts, file hashes, skipped reasons, and partial-result warnings.
 

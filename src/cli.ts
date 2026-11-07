@@ -1,5 +1,5 @@
 import { parseCliOptions } from './cli-options.js';
-import { mkdir, writeFile } from 'node:fs/promises';
+import { mkdir } from 'node:fs/promises';
 import { resolve, join } from 'node:path';
 import { randomUUID } from 'node:crypto';
 import { readConfig } from './config.js';
@@ -8,6 +8,7 @@ import { createPool } from './db/client.js';
 import { DocumentCache } from './cache/documents.js';
 import { fetchDocuments } from './fetch.js';
 import { createArchive } from './files/zip.js';
+import { writeRetrievalReport } from './report.js';
 
 try {
   const { request, output, headed } = parseCliOptions(process.argv.slice(2));
@@ -21,8 +22,7 @@ try {
     const result = await fetchDocuments(request, config, filesDirectory, new DocumentCache(config, pool), headed);
     const archive = result.files.length ? join(directory, `${request.matterNumber}-${request.documentType.replaceAll(' ', '-')}.zip`) : null;
     if (archive) await createArchive(result.files, archive, config.MAX_TOTAL_BYTES);
-    const report = { ...result, files: result.files.map(({ path: _, ...file }) => file), archive: archive ? archive.split('/').pop() : null };
-    await writeFile(join(directory, 'report.json'), JSON.stringify(report, null, 2), { flag: 'wx' });
+    await writeRetrievalReport(result, archive, join(directory, 'report.json'));
     console.log(JSON.stringify({ matter: result.matter.title, counts: result.matter.counts, downloaded: result.files.length, cacheHits: result.files.filter(file => file.cacheHit).length, skipped: result.skipped.length, warnings: result.warnings, archive, report: join(directory, 'report.json') }, null, 2));
     if (result.matter.counts[request.documentType] > 0 && !result.files.length) process.exitCode = 2;
   } catch (error) {

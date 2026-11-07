@@ -101,3 +101,14 @@ Sanitized names are published without replacing existing files or symlinks.
 Collisions receive a numbered suffix; reports and cache results retain the actual
 published filename. Downloads and cache restores share the same atomic publication
 path. See [Stage 11](stage-11.md) for filesystem requirements and tested boundaries.
+
+## Report schema and packaging evidence
+
+Reports use schemaVersion 1 and include a summary separating source document rows
+from accepted attachment counts, bytes, cache hits, skipped entries and warnings.
+Accepted local paths are omitted. Timeout partial results retain their warning;
+listing exhaustion alone does not establish successful attachment retrieval.
+Fatal retrieval or packaging failures do not produce a success report.
+Packaging verifies accepted-file sizes, hashes, unique safe names and both raw and
+compressed byte budgets. Prototype-like names unsupported by the ZIP library are
+rejected. See [Stage 12](stage-12.md) and [Stage 13](stage-13.md).
