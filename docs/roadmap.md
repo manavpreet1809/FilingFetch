@@ -116,7 +116,7 @@ Suggested commit: `Prevent filename collisions`
 
 ## Stage 12: Verify ZIP packaging
 
-Status: planned.
+Status: complete for synthetic packaging cases. See [Stage 12 verification](stage-12.md).
 
 Work: Package only accepted files while respecting the total attachment budget.
 
