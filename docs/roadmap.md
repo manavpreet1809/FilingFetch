@@ -136,7 +136,7 @@ Suggested commit: `Verify retrieval reports`
 
 ## Stage 14: Verify local document caching
 
-Status: planned.
+Status: complete for offline local-cache cases. See [Stage 14 verification](stage-14.md).
 
 Work: Validate manifests, TTL, fingerprints, and content hashes before cache reuse.
 

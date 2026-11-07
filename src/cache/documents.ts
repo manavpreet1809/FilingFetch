@@ -1,6 +1,7 @@
 import { createHash, randomUUID } from 'node:crypto';
 import { mkdir, copyFile, readFile, writeFile, rename, open, rm } from 'node:fs/promises';
 import { join } from 'node:path';
+import { z } from 'zod';
 import { Storage } from '@google-cloud/storage';
 import type { Pool } from 'pg';
 import type { Config } from '../config.js';
@@ -10,6 +11,19 @@ import { publishUniqueFile } from '../files/names.js';
 
 interface StoredFile extends Omit<FilingFile, 'path' | 'cacheHit'> { key: string }
 interface Entry { fingerprint: string; expiresAt: string; files: StoredFile[] }
+
+const entrySchema = z.object({
+  fingerprint: z.string().regex(/^[a-f0-9]{64}$/),
+  expiresAt: z.union([z.string(), z.date()]).refine(value => Number.isFinite(new Date(value).getTime())),
+  files: z.array(z.object({
+    key: z.string().regex(/^objects\/[a-f0-9]{64}$/),
+    filename: z.string().min(1), size: z.number().int().positive(),
+    sha256: z.string().regex(/^[a-f0-9]{64}$/), mimeType: z.string().min(1),
+    validation: z.enum(['pdf-parsed', 'signature', 'text', 'office-container']),
+    documentId: z.string().min(1), documentTitle: z.string(), originalFilename: z.string(),
+    downloadedAt: z.string().datetime(),
+  })).min(1),
+});
 
 export function fingerprint(doc: DocumentReference): string {
   return createHash('sha256').update(JSON.stringify([doc.id, doc.title, doc.date, doc.extension, doc.security])).digest('hex');
@@ -34,7 +48,8 @@ export class DocumentCache {
 
   async get(request: FilingRequest, doc: DocumentReference, directory: string, limit: number): Promise<FilingFile[] | null> {
     if (this.config.CACHE_BACKEND === 'off') return null;
-    let entry: Entry | undefined;
+    if (!Number.isSafeInteger(limit) || limit < 1 || limit > 10) throw new Error('Invalid cache retrieval limit');
+    let entry: unknown;
     if (this.pool) {
       const { rows } = await this.pool.query('SELECT source_fingerprint AS fingerprint, expires_at AS "expiresAt", files FROM cached_documents WHERE namespace=$1 AND matter_number=$2 AND document_type=$3 AND document_id=$4', this.identity(request, doc));
       entry = rows[0];
@@ -42,11 +57,15 @@ export class DocumentCache {
       try { entry = JSON.parse(await readFile(this.manifestPath(request, doc), 'utf8')); }
       catch (error) { if ((error as NodeJS.ErrnoException).code === 'ENOENT') return null; throw error; }
     }
-    if (!entry || entry.fingerprint !== fingerprint(doc) || new Date(entry.expiresAt).getTime() <= Date.now()) return null;
-    if (!Array.isArray(entry.files) || !entry.files.length) return null;
+    if (!entry) return null;
+    const parsed = entrySchema.safeParse(entry);
+    if (!parsed.success) throw new Error('Invalid cache manifest');
+    const accepted = parsed.data;
+    if (accepted.fingerprint !== fingerprint(doc) || new Date(accepted.expiresAt).getTime() <= Date.now()) return null;
     const result: FilingFile[] = [];
-    for (const file of entry.files.slice(0, limit)) {
-      if (!/^objects\/[a-f0-9]{64}$/.test(file.key) || file.filename !== safeFilename(file.filename)) throw new Error('Invalid cache manifest');
+    try {
+    for (const file of accepted.files.slice(0, limit)) {
+      if (file.documentId !== doc.id || file.key !== `objects/${file.sha256}` || file.filename !== safeFilename(file.filename)) throw new Error('Invalid cache manifest');
       const temporary = join(directory, `.cache-${randomUUID()}.part`);
       const reservation = await open(temporary, 'wx');
       await reservation.close();
@@ -61,6 +80,10 @@ export class DocumentCache {
       } finally { await rm(temporary, { force: true }); }
     }
     return result;
+    } catch (error) {
+      await Promise.all(result.map(file => rm(file.path, { force: true })));
+      throw error;
+    }
   }
 
   async put(request: FilingRequest, doc: DocumentReference, files: FilingFile[]): Promise<void> {

@@ -142,3 +142,13 @@ test('interrupted retrieval preserves accepted evidence and warning in the seria
     assert.equal(JSON.stringify(report).includes(directory), false);
   });
 });
+
+test('cache integrity errors fall back to source retrieval with a visible warning', async () => {
+ await fixture(async (directory,config) => {
+  const fake=source(directory,[[doc('one')]]); const cache=new DocumentCache(config);
+  cache.get=async()=>{throw new Error('Synthetic integrity failure');};
+  const result=await fetchDocuments(request,config,directory,cache,false,fake);
+  assert.deepEqual(fake.downloads,['one']); assert.equal(result.files[0]!.cacheHit,false);
+  assert.match(result.warnings.join(' '),/Cache read failed for one/); assert.equal(fake.closed,true);
+ });
+});
