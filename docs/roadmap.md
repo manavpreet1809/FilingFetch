@@ -156,7 +156,7 @@ Suggested commit: `Record core retrieval acceptance`
 
 ## Stage 16: Document Gmail OAuth setup
 
-Status: planned.
+Status: complete as implementation-matched setup documentation; live authorization is not claimed. See [Stage 16](stage-16.md).
 
 Work: Explain scopes, callback configuration, token storage, and revocation.
 
