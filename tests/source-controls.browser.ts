@@ -22,7 +22,7 @@ test('source client navigates and opens attachments when source buttons have und
    <button aria-label="undefined" onclick="document.querySelector('#dialog').style.display='block'">GO GET IT</button>
    </td></tr></table>
    <div id="dialog" style="display:none"><span>Download Files</span><button class="fm-download-button">synthetic.txt</button>
-   <button aria-label="undefined" onclick="document.querySelector('#dialog').style.display='none'">Close</button></div>
+   <div role="button" tabindex="0" onclick="document.querySelector('#dialog').style.display='none'">Close</div></div>
   `}));
   return page;
  });
@@ -33,5 +33,6 @@ test('source client navigates and opens attachments when source buttons have und
   const docs=await client.visibleDocuments(); assert.equal(docs.length,1);
   assert.deepEqual(await client.openAttachments(docs[0]!),['synthetic.txt']);
   await client.closeAttachments();
- } finally { await client.close(); pageFactory.mock.restore(); launch.mock.restore(); }
+  assert.equal(await (client as any).page.getByText('Download Files', {exact:true}).isVisible(), false);
+ } finally { await client.close(); await client.closeAttachments(); pageFactory.mock.restore(); launch.mock.restore(); }
 });

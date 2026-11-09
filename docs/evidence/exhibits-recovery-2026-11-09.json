@@ -1,0 +1,42 @@
+{
+  "date": "2026-11-09",
+  "request": {
+    "matterNumber": "M12205",
+    "documentType": "Exhibits",
+    "limit": 1
+  },
+  "sourceUrl": "https://uarb.novascotia.ca/fmi/webd/UARB15",
+  "sourceCounts": {
+    "Exhibits": 13,
+    "Key Documents": 6,
+    "Other Documents": 44,
+    "Transcripts": 0,
+    "Recordings": 0
+  },
+  "files": [
+    {
+      "filename": "H-2-1-H-2.pdf",
+      "size": 138372,
+      "sha256": "827140eea62d01f41b5f4395f23d96eaeef079d3d3b992f9076d98c0f8b35a37",
+      "mimeType": "application/pdf",
+      "validation": "pdf-parsed",
+      "documentId": "H-2",
+      "documentTitle": "HRWC (CA) RIR-1",
+      "originalFilename": "H-2.pdf",
+      "downloadedAt": "2026-11-09T12:42:51.656Z",
+      "cacheHit": false
+    }
+  ],
+  "skipped": [
+    {
+      "documentId": "H-1",
+      "documentTitle": "Application",
+      "filename": "H-1.pdf",
+      "reason": "File exceeds the size limit"
+    }
+  ],
+  "warnings": [],
+  "listingExhausted": false,
+  "independentDiskReportZipComparison": "passed",
+  "emailSent": false
+}

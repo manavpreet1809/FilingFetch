@@ -33,3 +33,9 @@ All 97 offline tests, one isolated browser regression (npm run test:browser), np
 This stage records successful and unsuccessful live acceptance evidence. It does not claim broad operational readiness. Exhibits dialog failures remain unresolved; the evidence does not identify their root cause. Full multi-window live enumeration, every category, all attachments, large successful files, cache-enabled live retrieval and email delivery remain unverified. listingExhausted describes observed rows, not acceptance of all attachments: the six Key Documents rows were visible but only one file was requested. No restricted attachment content was accessed or committed.
 
 Next: Stage 16 Gmail OAuth setup documentation; retain the live Exhibits limitation in release claims.
+
+## Follow-up: 2026-11-09
+
+The modal Close control was observed to be a div with role=button. Restricting the selector to button tags left the previous attachment modal open. The client now combines the button role with visible-text filtering, retaining support for category buttons whose accessible label is undefined. The browser regression asserts that the modal becomes hidden and that cleanup is safe after closing the browser.
+
+A live Exhibits request then rejected oversized H-1 and accepted H-2 without warnings. Independent disk/report/ZIP entry, byte and hash checks passed. See [sanitized follow-up evidence](evidence/exhibits-recovery-2026-11-09.json). The earlier failed run remains part of the historical record; broad source coverage and live email acceptance are still not claimed.
