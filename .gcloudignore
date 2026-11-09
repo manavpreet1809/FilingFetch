@@ -5,3 +5,7 @@ test/
 secrets/
 .env
 .env.*
+
+# Dependency symlinks are files rather than directories.
+node_modules
+node_modules/**

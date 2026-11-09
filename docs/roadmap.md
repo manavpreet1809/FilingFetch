@@ -176,7 +176,7 @@ Suggested commit: `Verify incoming email parsing`
 
 ## Stage 18: Verify inbox history synchronization
 
-Status: planned.
+Status: Locally verified with mocked Gmail pages and real PostgreSQL insertion/rollback; hosted watch acceptance remains pending. See [release status](release-status.md).
 
 Work: Test paging, expired history recovery, cursors, and duplicate message ingestion.
 
@@ -186,7 +186,7 @@ Suggested commit: `Verify inbox history synchronization`
 
 ## Stage 19: Define AI extraction evaluation cases
 
-Status: planned.
+Status: Labeled synthetic extraction cases added; a live model evaluation dataset/run remains pending. See [release status](release-status.md).
 
 Work: Create labeled requests for categories, identifiers, counts, ambiguity, and missing fields.
 
@@ -196,7 +196,7 @@ Suggested commit: `Define AI extraction evaluation cases`
 
 ## Stage 20: Evaluate extraction boundaries
 
-Status: planned.
+Status: Offline grounding and quoted-history cases verified with injected model responses; live model behavior remains unmeasured. See [release status](release-status.md).
 
 Work: Check quoted history, conflicting subjects, malicious instructions, and invented values.
 
@@ -206,7 +206,7 @@ Suggested commit: `Evaluate extraction boundaries`
 
 ## Stage 21: Verify clarification replies
 
-Status: planned.
+Status: Synthetic clarification wording and HTML escaping verified; live appearance remains pending. See [release status](release-status.md).
 
 Work: Explain missing or invalid fields while preserving correctly supplied information.
 
@@ -216,7 +216,7 @@ Suggested commit: `Verify clarification replies`
 
 ## Stage 22: Verify threaded email composition
 
-Status: planned.
+Status: Synthetic outgoing MIME/threading/ZIP tests verified; no actual send is claimed. See [release status](release-status.md).
 
 Work: Construct plain-text/HTML replies, MIME attachments, and threading headers.
 
@@ -236,7 +236,7 @@ Suggested commit: `Verify controlled email delivery`
 
 ## Stage 24: Test job state transitions
 
-Status: planned.
+Status: PostgreSQL lifecycle and bounded retrieval-failure recovery verified with mocked external services. See [release status](release-status.md).
 
 Work: Document and exercise pending, extracting, retrieving, packaging, sending, and terminal states.
 
@@ -246,7 +246,7 @@ Suggested commit: `Test job state transitions`
 
 ## Stage 25: Test leases and concurrent claims
 
-Status: planned.
+Status: PostgreSQL concurrent claims, expired leases and mailbox isolation verified locally. See [release status](release-status.md).
 
 Work: Verify ownership checks, expired leases, and duplicate worker invocations.
 
@@ -256,7 +256,7 @@ Suggested commit: `Test leases and concurrent claims`
 
 ## Stage 26: Test queue dispatch and retries
 
-Status: planned.
+Status: PostgreSQL dispatch versioning and failed-enqueue recovery tested with mocked Cloud Tasks; hosted replay remains pending. See [release status](release-status.md).
 
 Work: Exercise task creation failures, replayed events, dispatch versions, and attempt limits.
 
@@ -266,7 +266,7 @@ Suggested commit: `Test queue dispatch and retries`
 
 ## Stage 27: Resolve uncertain email delivery
 
-Status: planned.
+Status: Uncertain-send state and Sent reconciliation verified with mocked Gmail and real PostgreSQL; operational instructions added. See [release status](release-status.md).
 
 Work: Check Sent mail after interrupted sends and define operator resolution steps.
 
@@ -276,7 +276,7 @@ Suggested commit: `Resolve uncertain email delivery`
 
 ## Stage 28: Verify cloud cache and retention
 
-Status: planned.
+Status: Local cache and PostgreSQL retention verified; GCS and hosted retention remain pending. See [release status](release-status.md).
 
 Work: Test object integrity, cache expiry, cleanup, and database retention behavior.
 
@@ -286,7 +286,7 @@ Suggested commit: `Verify cloud cache and retention`
 
 ## Stage 29: Verify deployment and operations
 
-Status: planned.
+Status: Local container and endpoint checks passed; cloud deployment blocked on project/account/secrets. See [release status](release-status.md).
 
 Work: Validate configuration, service identities, endpoint authentication, monitoring, and shutdown.
 
@@ -296,7 +296,7 @@ Suggested commit: `Verify deployment and operations`
 
 ## Stage 30: Publish release documentation and demo
 
-Status: planned.
+Status: Documentation updated; release acceptance and deployed demonstration remain pending. See [release status](release-status.md).
 
 Work: Finish setup instructions, architecture diagram, verification results, limitations, and a sanitized walkthrough.
 

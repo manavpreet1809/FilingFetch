@@ -7,11 +7,19 @@ GCLOUD="${GCLOUD:-gcloud}"
 gc() { "$GCLOUD" --quiet --project="$PROJECT" "$@"; }
 RUNTIME="filingfetch-agent@$PROJECT.iam.gserviceaccount.com"
 CALLER="filingfetch-caller@$PROJECT.iam.gserviceaccount.com"
+command -v "$GCLOUD" >/dev/null || { echo 'gcloud is required; install the Google Cloud CLI and sign in first.' >&2; exit 1; }
+if [[ -n "$(git status --porcelain)" ]]; then
+  echo 'Commit source changes before deploying an identifiable revision.' >&2; exit 1
+fi
 TAG=$(git rev-parse --short HEAD)
 gc builds submit . --config=cloudbuild.yaml --region="$REGION" --substitutions="_REGION=$REGION,_TAG=$TAG" --service-account="projects/$PROJECT/serviceAccounts/filingfetch-build@$PROJECT.iam.gserviceaccount.com" --gcs-source-staging-dir="gs://$PROJECT-builds/source"
-gc run deploy filingfetch-agent --region="$REGION" --image="$REGION-docker.pkg.dev/$PROJECT/filingfetch/agent:$TAG" --service-account="$RUNTIME" --no-allow-unauthenticated --cpu=1 --memory=1Gi --concurrency=4 --min=0 --max=2 --timeout=900 --set-env-vars="GOOGLE_CLOUD_PROJECT=$PROJECT,AGENT_EMAIL=$AGENT_EMAIL,CACHE_BACKEND=gcs,GCS_CACHE_BUCKET=$PROJECT-documents,GMAIL_TOPIC=projects/$PROJECT/topics/gmail-inbox,TASK_QUEUE=projects/$PROJECT/locations/$REGION/queues/filing-jobs,CALLER_SERVICE_ACCOUNT=$CALLER,GOOGLE_OAUTH_CREDENTIALS_PATH=/secrets/oauth/client.json,GOOGLE_OAUTH_TOKEN_PATH=/secrets/token/token.json" --set-secrets="DATABASE_URL=filingfetch-database-url:latest,OPENAI_API_KEY=filingfetch-openai-key:latest,/secrets/oauth/client.json=filingfetch-google-oauth:latest,/secrets/token/token.json=filingfetch-google-token:latest"
+gc run jobs deploy filingfetch-migrate --region="$REGION" --image="$REGION-docker.pkg.dev/$PROJECT/filingfetch/agent:$TAG" --service-account="$RUNTIME" --command=node --args=dist/src/db/migrate.js --set-secrets="DATABASE_URL=filingfetch-database-url:latest" --max-retries=0 --task-timeout=300s
+# Fail deployment before moving traffic if migrations fail.
+gc run jobs execute filingfetch-migrate --region="$REGION" --wait
+gc run deploy filingfetch-agent --region="$REGION" --image="$REGION-docker.pkg.dev/$PROJECT/filingfetch/agent:$TAG" --service-account="$RUNTIME" --no-allow-unauthenticated --no-traffic --cpu=1 --memory=2Gi --concurrency=2 --min=0 --max=2 --timeout=900 --set-env-vars="SERVICE_URL=https://deployment-pending.invalid,GOOGLE_CLOUD_PROJECT=$PROJECT,AGENT_EMAIL=$AGENT_EMAIL,CACHE_BACKEND=gcs,GCS_CACHE_BUCKET=$PROJECT-documents,GMAIL_TOPIC=projects/$PROJECT/topics/gmail-inbox,TASK_QUEUE=projects/$PROJECT/locations/$REGION/queues/filing-jobs,CALLER_SERVICE_ACCOUNT=$CALLER,GOOGLE_OAUTH_CREDENTIALS_PATH=/secrets/oauth/client.json,GOOGLE_OAUTH_TOKEN_PATH=/secrets/token/token.json" --set-secrets="DATABASE_URL=filingfetch-database-url:latest,OPENAI_API_KEY=filingfetch-openai-key:latest,/secrets/oauth/client.json=filingfetch-google-oauth:latest,/secrets/token/token.json=filingfetch-google-token:latest"
 URL=$(gc run services describe filingfetch-agent --region="$REGION" --format='value(status.url)')
-gc run services update filingfetch-agent --region="$REGION" --update-env-vars="SERVICE_URL=$URL"
+gc run services update filingfetch-agent --region="$REGION" --no-traffic --update-env-vars="SERVICE_URL=$URL"
+gc run services update-traffic filingfetch-agent --region="$REGION" --to-latest
 gc run services add-iam-policy-binding filingfetch-agent --region="$REGION" --member="serviceAccount:$CALLER" --role=roles/run.invoker >/dev/null
 if gc pubsub subscriptions describe gmail-inbox-push >/dev/null 2>&1; then
   gc pubsub subscriptions modify-push-config gmail-inbox-push --push-endpoint="$URL/inbox" --push-auth-service-account="$CALLER" --push-auth-token-audience="$URL"

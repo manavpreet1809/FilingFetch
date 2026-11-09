@@ -21,7 +21,9 @@
     "gmail:authorize": "node --import tsx src/gmail/authorize.ts",
     "start": "node dist/src/server.js",
     "test": "node --import tsx --test tests/*.test.ts",
-    "test:browser": "node --import tsx --test tests/*.browser.ts"
+    "test:browser": "node --import tsx --test tests/*.browser.ts",
+    "test:integration": "node --import tsx --test tests/*.integration.ts",
+    "deploy:check": "node scripts/deployment-check.mjs"
   },
   "dependencies": {
     "@google-cloud/storage": "^8.2.0",
