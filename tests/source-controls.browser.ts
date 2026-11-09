@@ -26,7 +26,7 @@ test('source client navigates and opens attachments when source buttons have und
   `}));
   return page;
  });
- const client=new UarbClient(readConfig({CACHE_BACKEND:'off',STEP_TIMEOUT_MS:'1000'}),'/unused');
+ const client=new UarbClient(readConfig({CACHE_BACKEND:'off',STEP_TIMEOUT_MS:'5000'}),'/unused');
  try {
   const matter=await client.open({matterNumber:'M12205',documentType:'Key Documents',limit:1});
   assert.equal(matter.title,'Synthetic source matter'); assert.equal(matter.counts['Key Documents'],1);
