@@ -25,9 +25,17 @@ interface Job {
   reply_status: string | null;
 }
 
+interface JobDependencies {
+  tasks?: Pick<CloudTasksClient, 'createTask'>;
+  retrieve?: typeof fetchDocuments;
+  extract?: typeof extractRequest;
+}
+
 export class JobRunner {
-  private tasks = new CloudTasksClient();
-  constructor(private pool: Pool, private gmail: GmailClient, private config: Config) {}
+  private tasks: Pick<CloudTasksClient, 'createTask'>;
+  constructor(private pool: Pool, private gmail: GmailClient, private config: Config, private dependencies: JobDependencies = {}) {
+    this.tasks = dependencies.tasks ?? new CloudTasksClient();
+  }
 
   async dispatch() {
     const serviceUrl = process.env.SERVICE_URL;
@@ -69,14 +77,14 @@ export class JobRunner {
     const claimed = await this.pool.query<Job>(`
       UPDATE jobs SET lease_owner = $2, lease_expires_at = now() + interval '16 minutes',
         attempts = attempts + 1, updated_at = now()
-      WHERE id = $1 AND status NOT IN ('completed', 'failed', 'needs_clarification')
-        AND (lease_expires_at IS NULL OR lease_expires_at < now()) RETURNING *`, [id, owner]);
+      WHERE id = $1 AND mailbox = $3 AND status NOT IN ('completed', 'failed', 'needs_clarification')
+        AND (lease_expires_at IS NULL OR lease_expires_at < now()) RETURNING *`, [id, owner, this.gmail.mailbox]);
     const job = claimed.rows[0];
     if (!job) return;
     let directory: string | undefined;
     let sendStarted = job.status === 'sending';
     const update = async (sql: string, values: unknown[] = []) => {
-      const result = await this.pool.query(`UPDATE jobs SET ${sql}, updated_at = now() WHERE id = $1 AND lease_owner = $2`, [id, owner, ...values]);
+      const result = await this.pool.query(`UPDATE jobs SET ${sql}${sql.includes('lease_expires_at') ? '' : ", lease_expires_at = now() + interval '16 minutes'"}, updated_at = now() WHERE id = $1 AND lease_owner = $2`, [id, owner, ...values]);
       if (!result.rowCount) throw new Error('Job lease lost');
     };
     try {
@@ -104,14 +112,14 @@ export class JobRunner {
         terminal = 'failed';
         text = 'I could not complete this request after retrying. The source website or another service may be unavailable. Please try again later. No files are attached.';
       } else {
-        const extracted = request ? { request, issues: [] } : await extractRequest(incoming);
+        const extracted = request ? { request, issues: [] } : await (this.dependencies.extract ?? extractRequest)(incoming);
         request = extracted.request;
         if (!request) {
           terminal = 'needs_clarification'; text = clarification(extracted.issues);
         } else {
           await update("status = 'retrieving', request = $3", [request]);
           directory = await mkdtemp(join(tmpdir(), 'uarb-'));
-          const result = await fetchDocuments(request, this.config, join(directory, 'files'), new DocumentCache(this.config, this.pool));
+          const result = await (this.dependencies.retrieve ?? fetchDocuments)(request, this.config, join(directory, 'files'), new DocumentCache(this.config, this.pool));
           await update("status = 'packaging', result = $3", [{ ...result, files: result.files.map(({ path: _, ...file }) => file) }]);
           if (result.files.length) {
             attachment = join(directory, `${request.matterNumber}-${request.documentType.replaceAll(' ', '-')}.zip`);
@@ -134,7 +142,7 @@ export class JobRunner {
       }
       const code = error instanceof FilingError ? error.code : error instanceof GmailError ? `GMAIL_${error.status}` : 'PROCESSING_ERROR';
       const definiteSendFailure = sendStarted && error instanceof GmailError && error.status >= 400 && error.status < 500 && error.status !== 408;
-      await update(`status = $3, last_error = $4, lease_owner = NULL, lease_expires_at = NULL`, [sendStarted && !definiteSendFailure ? 'sending' : 'pending', code]);
+      await update(`status = $3, last_error = $4, lease_owner = NULL, lease_expires_at = NULL`, [sendStarted && !definiteSendFailure ? 'sending' : job.attempts >= 4 ? 'failed' : 'pending', code]);
       console.error(JSON.stringify({ event: 'job_failed', jobId: id, code, deliveryUncertain: sendStarted && !definiteSendFailure }));
       throw new Error(code);
     } finally {
